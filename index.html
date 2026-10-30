@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>수요처 활동 지도 (네이버 지도)</title>
+<title>수요처 활동 지도 v1.2</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
 /* 레이아웃: 상단 안내띠(sticky) → 헤더 → 탭 3개 → 패널. 지도 패널은 왼쪽 범례·검색 / 오른쪽 지도, 좁은 화면에서는 세로로 쌓임. */
@@ -93,6 +93,9 @@ label { font-weight: 500; }
 .map-wrap { position: relative; min-width: 0; display: flex; flex-direction: column; }
 #map { height: 72vh; min-height: 460px; flex: 1 1 auto; border-radius: 12px; border: 1px solid var(--border); background: var(--map-bg);
   background-image: linear-gradient(var(--map-grid) 1px, transparent 1px), linear-gradient(90deg, var(--map-grid) 1px, transparent 1px); background-size: 48px 48px; }
+#map { position: relative !important; width: 100% !important; height: 72vh !important; min-height: 460px !important; overflow: hidden !important; }
+#nmap { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; margin: 0 !important; }
+.ver { display: inline-block; vertical-align: middle; font-size: .8rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
 .npop { background: var(--surface); color: var(--fg); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.2); padding: 14px 16px; min-width: 240px; max-width: 320px; line-height: 1.5; position: relative; }
 .npop .npop-close { position: absolute; right: 6px; top: 6px; min-height: 28px; padding: 0 8px; border: none; background: none; color: var(--muted); }
 .tile-notice { position: absolute; left: 12px; bottom: 28px; z-index: 800; max-width: min(92%, 520px); background: var(--warn-bg); color: var(--warn); border: 1px solid var(--border); border-radius: 10px; padding: 8px 40px 8px 12px; font-size: .88rem; line-height: 1.4; }
@@ -159,7 +162,7 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
   .map-layout { grid-template-columns: 1fr; }
   .legend-panel { order: 2; }
   .map-wrap { order: 1; }
-  #map { height: 58vh; min-height: 380px; }
+  #map { height: 58vh !important; min-height: 380px !important; }
   .field-row { grid-template-columns: 1fr; }
   .tabs button { padding: 10px 12px; font-size: 1rem; }
   .app-header { padding-top: 14px; }
@@ -174,7 +177,7 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
 
 <header class="app-header">
   <div>
-    <h1>노인공익활동 수요처 지도</h1>
+    <h1>노인공익활동 수요처 지도 <span class="ver">v1.2</span></h1>
     <p class="sub">2027년 노인공익활동 사업 10개 · 수요처(■) / 9988행복지키미 참여자(●)·수요자(▲) · 활동점검 기록</p>
   </div>
   <div class="status" id="storageStatus"><span class="pill">저장 위치 확인 중…</span></div>
@@ -918,7 +921,13 @@ window.NAVER_KEY_ID = "";
   // ================= 지도 =================
   var map = null, infoWin = null, markers = [], markerIndex = { site: {}, person: {} }, openMarker = null;
   function ll(lat, lng) { return new naver.maps.LatLng(lat, lng); }
-  function resizeMap() { if (!map) return; var el = $("map"); map.setSize(new naver.maps.Size(el.clientWidth, el.clientHeight)); }
+  // 바깥 상자(#map)는 CSS가 크기를 정하고, 네이버 지도는 안쪽 상자(#nmap)에 그림 → 크기 조정이 바깥 크기에 영향을 주지 않음(무한 축소 방지)
+  var lastSize = "";
+  function resizeMap(force) {
+    if (!map) return; var el = $("map"), w = el.clientWidth, h = el.clientHeight;
+    if (!w || !h || (!force && (w + "x" + h) === lastSize)) return;
+    lastSize = w + "x" + h; map.setSize(new naver.maps.Size(w, h));
+  }
 
   // 네이버 지도 스크립트 불러오기: 키는 설정값 → 이 브라우저에 저장한 값 순서
   function savedKey() { try { return localStorage.getItem("naverKeyId") || ""; } catch (e) { return ""; } }
@@ -951,7 +960,8 @@ window.NAVER_KEY_ID = "";
 
   function initMap() {
     if (!LIB_OK.naver) return;
-    map = new naver.maps.Map("map", {
+    var inner = document.createElement("div"); inner.id = "nmap"; $("map").appendChild(inner);
+    map = new naver.maps.Map(inner, {
       center: ll(ML.DEFAULT_CENTER[0], ML.DEFAULT_CENTER[1]), zoom: ML.DEFAULT_ZOOM,
       zoomControl: true, zoomControlOptions: { position: naver.maps.Position.TOP_LEFT },
       mapTypeControl: true
@@ -961,7 +971,9 @@ window.NAVER_KEY_ID = "";
       if (pick) { onMapClick({ latlng: { lat: e.coord.lat(), lng: e.coord.lng() } }); return; }
       closeInfo();
     });
-    if (window.ResizeObserver) new ResizeObserver(function () { resizeMap(); }).observe($("map"));
+    resizeMap(true);
+    var rt = null;
+    window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(function () { resizeMap(); }, 150); });
   }
   function closeInfo() { if (infoWin) infoWin.close(); openMarker = null; }
   function openInfo(marker, html) {
@@ -1018,6 +1030,7 @@ window.NAVER_KEY_ID = "";
 
   function renderMarkers() {
     if (!map) { $("mapSummary").textContent = "지도 연결 전 — 등록 수요처 " + state.sites.length + "곳 · 9988 개인 " + state.persons.length + "명"; return; }
+    resizeMap(); // 스크롤바 생김·사라짐 등으로 폭이 바뀐 경우 반영(바깥 상자 크기는 CSS 고정이라 반복 축소 불가)
     closeInfo(); markers.forEach(function (m) { m.setMap(null); }); markers = []; markerIndex = { site: {}, person: {} };
     var shown = { sites: 0, p: 0, r: 0 };
     state.sites.forEach(function (s) {
