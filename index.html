@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>수요처 활동 지도 v1.2</title>
+<title>수요처 활동 지도 v2.0</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
 /* 레이아웃: 상단 안내띠(sticky) → 헤더 → 탭 3개 → 패널. 지도 패널은 왼쪽 범례·검색 / 오른쪽 지도, 좁은 화면에서는 세로로 쌓임. */
@@ -49,7 +49,7 @@ button.danger { color: var(--danger); border-color: var(--danger); }
 button.small { min-height: 34px; padding: 4px 10px; font-size: .9rem; }
 button.link { border: none; background: none; padding: 2px 4px; min-height: 0; color: var(--accent); text-decoration: underline; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-input[type=text], input[type=search], input[type=number], input[type=date], select, textarea {
+input[type=text], input[type=email], input[type=password], input[type=search], input[type=number], input[type=date], select, textarea {
   width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); min-height: 44px; }
 textarea { min-height: 88px; resize: vertical; }
 label { font-weight: 500; }
@@ -69,6 +69,7 @@ label { font-weight: 500; }
 .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); background: var(--surface); }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
 .card + .card, .cards + .card, .card + .cards { margin-top: 16px; }
+.cards > .card { margin-top: 0; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .card-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .card-head .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -96,6 +97,21 @@ label { font-weight: 500; }
 #map { position: relative !important; width: 100% !important; height: 72vh !important; min-height: 460px !important; overflow: hidden !important; }
 #nmap { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; margin: 0 !important; }
 .ver { display: inline-block; vertical-align: middle; font-size: .8rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+.gate { max-width: 460px; margin: 16px auto 40px; }
+.gate .card { display: flex; flex-direction: column; gap: 12px; }
+.gate form { display: flex; flex-direction: column; gap: 12px; }
+.gate-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.gate-actions button { flex: 1 1 150px; }
+.gate .msg { padding: 10px 12px; border-radius: 8px; background: var(--surface-2); overflow-wrap: anywhere; }
+.gate .msg.err { background: var(--danger-bg); color: var(--danger); }
+.gate .msg.ok { background: var(--ok-bg); color: var(--ok); }
+body.gated .tabs, body.gated main, body.gated .notice { display: none !important; }
+.userbox { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .9rem; color: var(--muted); overflow-wrap: anywhere; }
+.userbox button { min-height: 34px; padding: 4px 10px; font-size: .9rem; }
+.admin-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.admin-list li { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; }
+.admin-list li .who { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.admin-list li.empty-row { color: var(--muted); border-style: dashed; }
 .npop { background: var(--surface); color: var(--fg); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.2); padding: 14px 16px; min-width: 240px; max-width: 320px; line-height: 1.5; position: relative; }
 .npop .npop-close { position: absolute; right: 6px; top: 6px; min-height: 28px; padding: 0 8px; border: none; background: none; color: var(--muted); }
 .tile-notice { position: absolute; left: 12px; bottom: 28px; z-index: 800; max-width: min(92%, 520px); background: var(--warn-bg); color: var(--warn); border: 1px solid var(--border); border-radius: 10px; padding: 8px 40px 8px 12px; font-size: .88rem; line-height: 1.4; }
@@ -177,11 +193,26 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
 
 <header class="app-header">
   <div>
-    <h1>노인공익활동 수요처 지도 <span class="ver">v1.2</span></h1>
+    <h1>노인공익활동 수요처 지도 <span class="ver">v2.0</span></h1>
     <p class="sub">2027년 노인공익활동 사업 10개 · 수요처(■) / 9988행복지키미 참여자(●)·수요자(▲) · 활동점검 기록</p>
   </div>
   <div class="status" id="storageStatus"><span class="pill">저장 위치 확인 중…</span></div>
+  <div class="userbox" id="userBox" hidden><span id="userEmail"></span><button type="button" id="btnLogout">로그아웃</button></div>
 </header>
+
+<section id="gate" class="gate" hidden aria-live="polite">
+  <div class="card">
+    <h2 id="gateTitle">로그인</h2>
+    <p id="gateDesc" class="muted small-text"></p>
+    <div id="gateMsg" class="msg" hidden></div>
+    <form id="gateForm" novalidate>
+      <div class="field" id="gEmailRow"><label for="gEmail">이메일</label><input type="email" id="gEmail" autocomplete="username"></div>
+      <div class="field" id="gPwRow"><label for="gPw">비밀번호</label><input type="password" id="gPw" autocomplete="current-password"></div>
+      <div class="field" id="gPw2Row" hidden><label for="gPw2">비밀번호 확인</label><input type="password" id="gPw2" autocomplete="new-password"><span class="hint">8자 이상</span></div>
+      <div class="gate-actions" id="gateActions"></div>
+    </form>
+  </div>
+</section>
 
 <div class="notice" id="localNotice" hidden>
   <span>이 브라우저에만 저장됨, 엑셀 내려받기로 백업하세요</span>
@@ -195,6 +226,7 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
   <button type="button" role="tab" id="tabBtn-map" aria-selected="true" aria-controls="tab-map" data-tab="map">지도</button>
   <button type="button" role="tab" id="tabBtn-data" aria-selected="false" aria-controls="tab-data" data-tab="data">데이터 관리</button>
   <button type="button" role="tab" id="tabBtn-insp" aria-selected="false" aria-controls="tab-insp" data-tab="insp">활동점검</button>
+  <button type="button" role="tab" id="tabBtn-admin" aria-selected="false" aria-controls="tab-admin" data-tab="admin" hidden>직원 관리</button>
 </nav>
 
 <main>
@@ -235,13 +267,13 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
         <p id="storageDetail" class="muted small-text" style="margin:6px 0 12px">저장 위치 확인 중…</p>
         <div class="btn-row">
           <button type="button" class="primary" id="btnBackup">현재 데이터 엑셀 내려받기(백업)</button>
-          <button type="button" id="btnTemplate">빈 양식 내려받기</button>
+          <button type="button" id="btnTemplate">입력 양식 내려받기</button>
         </div>
-        <p class="muted small-text" style="margin-top:8px">빈 양식에는 드롭다운이 없습니다. 드롭다운이 있는 양식은 함께 제공된 '수요처지도_업로드양식.xlsx'를 쓰세요.</p>
+        <p class="muted small-text" style="margin-top:8px">입력 양식은 번호·좌표 없이 주소만 적는 양식입니다. 목록 선택(드롭다운)이 있는 양식은 함께 제공된 '수요처지도_입력양식.xlsx'를 쓰세요.</p>
       </div>
       <div class="card needs-write">
         <h2>엑셀 업로드</h2>
-        <p class="muted small-text" style="margin:6px 0 12px">양식(수요처 / 9988개인 / 활동점검 시트)으로 작성한 .xlsx 파일을 선택하면 검사 결과를 먼저 보여 드립니다. 오류 행은 반영되지 않습니다.</p>
+        <p class="muted small-text" style="margin:6px 0 12px">입력 양식(번호·좌표 없이 주소만) 또는 백업 파일을 선택하면 검사 결과를 먼저 보여 드립니다. 번호는 자동으로 붙고, 위치는 반영할 때 주소로 찾습니다. 오류 행은 반영되지 않습니다.</p>
         <input type="file" id="fileInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
       </div>
     </div>
@@ -270,8 +302,8 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
     </div>
 
     <div class="card">
-      <div class="card-head"><h2>좌표 미지정 <span class="muted" id="noCoordCount"></span></h2><div class="tools"><button type="button" class="primary" id="btnGeoAll">수요처 주소로 좌표 일괄 찾기</button></div></div>
-      <p class="muted small-text" style="margin-bottom:10px">위도·경도가 없어 지도에 표시되지 않는 항목입니다. [지도에서 위치 지정]을 누른 뒤 지도를 클릭하면 좌표가 저장됩니다.</p>
+      <div class="card-head"><h2>좌표 미지정 <span class="muted" id="noCoordCount"></span></h2><div class="tools"><button type="button" class="primary" id="btnGeoAll">주소로 좌표 일괄 찾기</button></div></div>
+      <p class="muted small-text" style="margin-bottom:10px">위치(좌표)가 없어 지도에 표시되지 않는 항목입니다. 주소가 있으면 [주소로 좌표 일괄 찾기]로, 주소로 못 찾으면 [지도에서 위치 지정]을 누른 뒤 지도를 클릭해 저장하세요.</p>
       <ul class="coord-list" id="noCoordList"></ul>
     </div>
   </section>
@@ -289,6 +321,22 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
       <div class="table-wrap" id="inspTableWrap"></div>
     </div>
   </section>
+  <!-- ===== 직원 관리(관리자 전용) ===== -->
+  <section id="tab-admin" class="panel" role="tabpanel" aria-labelledby="tabBtn-admin" hidden>
+    <div class="cards">
+      <div class="card">
+        <div class="card-head"><h2>승인 요청 <span class="muted" id="reqCount"></span></h2></div>
+        <p class="muted small-text" style="margin-bottom:10px">회원가입과 이메일 인증을 마친 사람이 여기에 나타납니다. 기관 직원이 맞는지 확인한 뒤 승인하세요.</p>
+        <ul class="admin-list" id="reqList"></ul>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>승인된 직원 <span class="muted" id="memCount"></span></h2></div>
+        <ul class="admin-list" id="memList"></ul>
+        <div class="key-box" style="margin-top:12px"><input type="email" id="addMemberEmail" placeholder="직원 이메일을 직접 추가" aria-label="직원 이메일"><button type="button" id="btnAddMember">추가</button></div>
+        <p class="muted small-text" style="margin-top:8px" id="adminNote"></p>
+      </div>
+    </div>
+  </section>
 </main>
 
 <!-- ===== 대화상자 ===== -->
@@ -296,7 +344,7 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
   <form method="dialog" id="formSite" novalidate>
     <h2 id="dlgSiteTitle">수요처 추가</h2>
     <div class="field-row">
-      <div class="field"><label for="f_site_id" class="req">수요처ID</label><input type="text" id="f_site_id" name="수요처ID" placeholder="예: D016"><span class="hint">영문·숫자 권장, 중복 불가</span></div>
+      <div class="field"><label for="f_site_id">수요처ID</label><input type="text" id="f_site_id" name="수요처ID" placeholder="비워 두면 자동"><span class="hint">비워 두면 D001처럼 자동으로 붙습니다</span></div>
       <div class="field"><label for="f_site_prog" class="req">사업명</label><select id="f_site_prog" name="사업명"></select></div>
     </div>
     <div class="field"><label for="f_site_name" class="req">수요처명</label><input type="text" id="f_site_name" name="수요처명" placeholder="9988행복지키미는 마을(부락)명"></div>
@@ -328,11 +376,13 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
   <form method="dialog" id="formPerson" novalidate>
     <h2 id="dlgPersonTitle">참여자·수요자 추가</h2>
     <div class="field-row">
-      <div class="field"><label for="f_person_id" class="req">개인ID</label><input type="text" id="f_person_id" name="개인ID" placeholder="예: P006 / R010"></div>
+      <div class="field"><label for="f_person_id">개인ID</label><input type="text" id="f_person_id" name="개인ID" placeholder="비워 두면 자동"><span class="hint">비워 두면 P001·R001처럼 자동으로 붙습니다</span></div>
       <div class="field"><label for="f_person_kind" class="req">구분</label><select id="f_person_kind" name="구분"></select></div>
     </div>
     <div class="field"><label for="f_person_name" class="req">표시명</label><input type="text" id="f_person_name" name="표시명" placeholder="가명·이니셜만 (예: 김○○, 참여자A)"><span class="hint">실명·연락처·생년월일은 입력하지 않습니다</span></div>
     <div class="field"><label for="f_person_site" class="req">소속 마을(9988행복지키미 수요처)</label><select id="f_person_site" name="소속수요처ID"></select></div>
+    <div class="field"><label for="f_person_addr">주소(대략 위치)</label><input type="text" id="f_person_addr" name="주소" placeholder="예: 청주시 상당구 ○○동 ○○ (정확한 집 주소 대신 동·리·마을 단위 권장)"></div>
+    <div class="btn-row"><button type="button" id="btnPersonGeo">주소로 좌표 찾기</button><span class="hint muted small-text" id="personGeoMsg">주소를 입력하면 위치를 찾아 줍니다</span></div>
     <div class="field-row">
       <div class="field"><label for="f_person_lat">위도</label><input type="text" id="f_person_lat" name="위도" inputmode="decimal"></div>
       <div class="field"><label for="f_person_lng">경도</label><input type="text" id="f_person_lng" name="경도" inputmode="decimal"></div>
@@ -388,7 +438,11 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
    아래 따옴표 안에 붙여 넣으세요. 비워 두면 화면에서 직접 입력할 수 있습니다.
    ※ Application 설정에서 'Dynamic Map'과 'Geocoding'을 모두 선택해야 합니다.
    ※ 이 파일을 올린 주소(예: https://아이디.github.io)를 Web 서비스 URL에 등록해야 합니다. */
-window.NAVER_KEY_ID = "";
+window.NAVER_KEY_ID = "uv443wo2ie";
+/* Firebase(공유 저장소) 설정: 콘솔의 firebaseConfig 중괄호 내용. 비워 두면(null) 이 브라우저에만 저장하는 방식으로 동작 */
+window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "authDomain": "suyocheo-map.firebaseapp.com", "projectId": "suyocheo-map", "storageBucket": "suyocheo-map.firebasestorage.app", "messagingSenderId": "880850823660", "appId": "1:880850823660:web:0a04034e63ea5d5028f8c9"};
+/* 관리자 이메일: 직원 승인 권한. Firestore 보안 규칙의 관리자 이메일과 반드시 같아야 함 */
+window.ADMIN_EMAIL = "qjh4734@gmail.com";
 /* ===================================================================== */
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -402,8 +456,18 @@ window.NAVER_KEY_ID = "";
   "use strict";
 
   var PROGRAMS = [{"name": "9988행복지키미", "color": "#E15759"}, {"name": "녹색마을", "color": "#59A14F"}, {"name": "우리문화", "color": "#B07AA1"}, {"name": "행복나눔", "color": "#F28E2B"}, {"name": "지방하천", "color": "#4E79A7"}, {"name": "청소년보호지원", "color": "#EDC948"}, {"name": "커피박찌꺼기", "color": "#9C755F"}, {"name": "신나는체험마을", "color": "#FF9DA7"}, {"name": "행복세탁", "color": "#76B7B2"}, {"name": "농작물체험", "color": "#A0A800"}];
-  var COLUMNS = {"수요처": ["수요처ID", "사업명", "수요처명", "주소", "위도", "경도", "참여자수", "수요자수", "담당자", "비고"], "9988개인": ["개인ID", "구분", "표시명", "소속수요처ID", "위도", "경도", "비고"], "활동점검": ["점검ID", "수요처ID", "점검일자", "점검자", "점검방법", "확인 활동인원", "점검내용", "조치사항"]};
+  var COLUMNS = {"수요처": ["수요처ID", "사업명", "수요처명", "주소", "위도", "경도", "참여자수", "수요자수", "담당자", "비고"], "9988개인": ["개인ID", "구분", "표시명", "소속수요처ID", "주소", "위도", "경도", "비고"], "활동점검": ["점검ID", "수요처ID", "점검일자", "점검자", "점검방법", "확인 활동인원", "점검내용", "조치사항"]};
   var REQUIRED = {"수요처": ["수요처ID", "사업명", "수요처명", "주소", "참여자수", "수요자수"], "9988개인": ["개인ID", "구분", "표시명", "소속수요처ID"], "활동점검": ["점검ID", "수요처ID", "점검일자", "점검자", "점검방법", "점검내용"]};
+  var INPUT_COLUMNS = {"수요처": ["사업명", "수요처명", "주소", "참여자수", "수요자수", "담당자", "비고"], "9988개인": ["구분", "표시명", "소속 마을", "주소", "비고"], "활동점검": ["수요처명", "사업명", "점검일자", "점검자", "점검방법", "확인 활동인원", "점검내용", "조치사항"]};
+  // 업로드 때 꼭 있어야 하는 열(묶음 안에서 하나만 있으면 됨). 번호·좌표 열은 없어도 됨
+  var UPLOAD_REQ = {
+    "수요처": [["사업명"], ["수요처명"], ["주소"], ["참여자수"], ["수요자수"]],
+    "9988개인": [["구분"], ["표시명"], ["소속수요처ID", "소속 마을"]],
+    "활동점검": [["점검일자"], ["점검자"], ["점검방법"], ["점검내용"], ["수요처ID", "수요처명"]]
+  };
+  // 이름으로 연결하는 보조 열(저장하지 않고 번호로 바꿔 저장)
+  var ALIASES = { "수요처": [], "9988개인": ["소속 마을"], "활동점검": ["수요처명", "사업명"] };
+  var ID_PREFIX = { "수요처": "D", "참여자": "P", "수요자": "R", "활동점검": "I" };
   var SHEETS = ["수요처", "9988개인", "활동점검"];
   var PROGRAM_9988 = PROGRAMS[0].name; // 9988행복지키미 (programs.json 1번)
   var KINDS = ["참여자", "수요자"];
@@ -422,6 +486,7 @@ window.NAVER_KEY_ID = "";
 
   // ---------- 기본 유틸 ----------
   function str(v) { return v == null ? "" : String(v).trim(); }
+  function canon(v) { return str(v).replace(/\s+/g, ""); }
   function isBlank(v) { return v == null || String(v).trim() === ""; }
   function pad2(n) { return (n < 10 ? "0" : "") + n; }
   function fmtDate(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
@@ -487,6 +552,7 @@ window.NAVER_KEY_ID = "";
       else if (c === "점검일자") out[c] = v;                                    // normalizeDate에서 처리
       else out[c] = str(v);
     });
+    (ALIASES[sheet] || []).forEach(function (a) { if (raw[a] != null) out[a] = str(raw[a]); });
     return out;
   }
 
@@ -512,24 +578,37 @@ window.NAVER_KEY_ID = "";
     row[col] = n;
   }
 
+  var SKIP_REQ = { "수요처ID": 1, "개인ID": 1, "점검ID": 1, "소속수요처ID": 1, "참여자수": 1, "수요자수": 1, "점검일자": 1 };
   function requiredCheck(sheet, row, errors) {
     REQUIRED[sheet].forEach(function (c) {
-      if (c === "참여자수" || c === "수요자수" || c === "점검일자") return; // 전용 검사에서 처리
+      if (SKIP_REQ[c]) return; // 번호(자동)·연결(이름)·숫자·날짜는 전용 검사에서 처리
       if (isBlank(row[c])) errors.push(c + " 누락");
     });
   }
 
   // ---------- 헤더 검사 ----------
   function checkHeaders(sheets) {
-    var missingSheets = [], headerErrors = [];
+    var missingSheets = [], headerErrors = [], present = [];
     SHEETS.forEach(function (name) {
       var s = sheets[name];
-      if (!s) { missingSheets.push(name); return; }
-      var have = (s.headers || []).map(function (h) { return str(h); });
-      var missing = COLUMNS[name].filter(function (c) { return have.indexOf(c) < 0; });
+      if (!s) return;
+      present.push(name);
+      var have = (s.headers || []).map(function (h) { return canon(h); });
+      var missing = UPLOAD_REQ[name].filter(function (group) {
+        return !group.some(function (c) { return have.indexOf(canon(c)) >= 0; });
+      }).map(function (group) { return group.join(" 또는 "); });
       if (missing.length) headerErrors.push({ sheet: name, missing: missing });
     });
-    return { ok: missingSheets.length === 0 && headerErrors.length === 0, missingSheets: missingSheets, headerErrors: headerErrors };
+    if (!present.length) missingSheets = SHEETS.slice();
+    return { ok: present.length > 0 && headerErrors.length === 0, missingSheets: missingSheets, headerErrors: headerErrors, present: present };
+  }
+
+  // 번호 자동 부여: 접두어 + 3자리(기존 최대값 + 1)
+  function nextId(prefix, ids) {
+    var max = 0, re = new RegExp("^" + prefix + "(\\d+)$");
+    (ids || []).forEach(function (id) { var m = re.exec(str(id)); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+    var n = String(max + 1); while (n.length < 3) n = "0" + n;
+    return prefix + n;
   }
 
   // ---------- 집계 ----------
@@ -603,56 +682,116 @@ window.NAVER_KEY_ID = "";
     opts = opts || {};
     var today = opts.today || todayStr();
     var mode = opts.mode === "replace" ? "replace" : "merge";
+    var single = !!opts.single; // 화면 입력 1건: 이름으로 기존 데이터를 찾지 않고 빈 번호는 새로 부여
     var existing = opts.existing || { sites: [], persons: [], inspections: [] };
-    var hdr = checkHeaders(input.sheets || {});
-    var result = { ok: hdr.ok, missingSheets: hdr.missingSheets, headerErrors: hdr.headerErrors, sheets: {}, mismatches9988: [], mode: mode };
+    var newInspId = typeof opts.newInspectionId === "function" ? opts.newInspectionId : null;
+    var sheetsIn = input.sheets || {};
+    var hdr = checkHeaders(sheetsIn);
+    var result = { ok: hdr.ok, missingSheets: hdr.missingSheets, headerErrors: hdr.headerErrors, present: hdr.present, sheets: {}, mismatches9988: [], mode: mode, autoIds: 0, autoNew: 0, autoMatched: 0, geocodeTargets: { sites: 0, persons: 0 } };
     if (!hdr.ok) return result;
 
+    function rowsOf(name) { return sheetsIn[name] ? (sheetsIn[name].rows || []) : []; }
     function prep(name) {
-      var seen = {}, rows = [];
-      (input.sheets[name].rows || []).forEach(function (r) {
-        var row = normalizeRow(name, r.data || {});
-        var errors = [], warnings = [];
-        requiredCheck(name, row, errors);
-        var id = str(row[ID_KEY[name]]);
-        if (id) {
-          if (seen.hasOwnProperty(id)) errors.push("ID 중복(" + seen[id] + "행과 동일)"); else seen[id] = r.rowNo;
-        }
-        rows.push({ rowNo: r.rowNo, data: row, errors: errors, warnings: warnings });
-      });
-      return rows;
+      return rowsOf(name).map(function (r) { var row = normalizeRow(name, r.data || {}); var errors = []; requiredCheck(name, row, errors); return { rowNo: r.rowNo, data: row, errors: errors, warnings: [], autoId: false }; });
     }
+    function dupCheck(rows, key, label) {
+      var seen = {};
+      rows.forEach(function (x) {
+        var id = str(x.data[key]); if (!id) return;
+        if (seen.hasOwnProperty(id)) x.errors.push(x.autoId ? (label + "이(가) " + seen[id] + "행과 같음(같은 내용이 두 번 있음)") : ("ID 중복(" + seen[id] + "행과 동일)"));
+        else seen[id] = x.rowNo;
+      });
+    }
+    function keepCoords(row, ex) {
+      if (!ex || hasCoords(row) || !hasCoords(ex)) return;
+      if (canon(ex["주소"]) === canon(row["주소"])) { row["위도"] = toNumber(ex["위도"]); row["경도"] = toNumber(ex["경도"]); }
+    }
+    var exSiteById = {}, exPersonById = {};
+    existing.sites.forEach(function (s) { exSiteById[str(s["수요처ID"])] = s; });
+    existing.persons.forEach(function (p) { exPersonById[str(p["개인ID"])] = p; });
+    var usedIds = { "수요처": existing.sites.map(function (s) { return s["수요처ID"]; }), "9988개인": existing.persons.map(function (s) { return s["개인ID"]; }), "활동점검": existing.inspections.map(function (s) { return s["점검ID"]; }) };
 
-    var siteRows = prep("수요처"), personRows = prep("9988개인"), inspRows = prep("활동점검");
-
+    // ---------- 수요처 ----------
+    var siteRows = prep("수요처");
+    var exSiteByName = {};
+    if (!single) existing.sites.forEach(function (s) { exSiteByName[canon(s["사업명"]) + "|" + canon(s["수요처명"])] = s["수요처ID"]; });
     siteRows.forEach(function (x) {
       var row = x.data;
       if (!isBlank(row["사업명"]) && !isProgram(row["사업명"])) x.errors.push("사업명 불일치: '" + row["사업명"] + "' (10개 사업명 중 하나여야 함)");
       intCheck(row, "참여자수", true, x.errors);
       intCheck(row, "수요자수", true, x.errors);
       coordCheck(row, x.errors, x.warnings);
+      if (isBlank(row["수요처ID"]) && !isBlank(row["수요처명"]) && !isBlank(row["사업명"])) {
+        var hit = exSiteByName[canon(row["사업명"]) + "|" + canon(row["수요처명"])];
+        row["수요처ID"] = hit || nextId(ID_PREFIX["수요처"], usedIds["수요처"]);
+        if (!hit) usedIds["수요처"].push(row["수요처ID"]);
+        x.autoId = true; result.autoIds++; if (hit) result.autoMatched++; else result.autoNew++;
+      }
+      if (isBlank(row["수요처ID"]) && !x.errors.length) x.errors.push("수요처ID를 정하지 못함(사업명·수요처명 확인)");
+      if (!single && !x.errors.length) keepCoords(row, exSiteById[str(row["수요처ID"])]);
     });
+    dupCheck(siteRows, "수요처ID", "사업명·수요처명");
 
-    // 참조용 수요처 집합: 업로드 정상 수요처 (+ 병합 모드면 기존 수요처)
+    // 연결용 수요처 목록: 업로드 정상 수요처 (+ 추가·갱신 모드면 기존 수요처)
     var siteMap = {};
     if (mode === "merge") existing.sites.forEach(function (s) { siteMap[str(s["수요처ID"])] = s; });
     siteRows.forEach(function (x) { if (!x.errors.length) siteMap[str(x.data["수요처ID"])] = x.data; });
+    function sitesByName(name, prog) {
+      var n = canon(name), p = canon(prog);
+      return Object.keys(siteMap).map(function (k) { return siteMap[k]; })
+        .filter(function (s) { return canon(s["수요처명"]) === n && (!p || canon(s["사업명"]) === p); });
+    }
 
+    // ---------- 9988개인 ----------
+    var personRows = prep("9988개인");
     personRows.forEach(function (x) {
       var row = x.data;
       if (!isBlank(row["구분"]) && KINDS.indexOf(row["구분"]) < 0) x.errors.push("구분은 참여자/수요자 중 하나");
       var sid = str(row["소속수요처ID"]);
-      if (sid) {
+      if (!sid) {
+        var vname = str(row["소속 마을"]);
+        if (!vname) x.errors.push("소속 마을(또는 소속수요처ID) 누락");
+        else {
+          var hits = sitesByName(vname, PROGRAM_9988);
+          if (!hits.length) x.errors.push("소속 마을 '" + vname + "'을(를) " + PROGRAM_9988 + " 수요처에서 찾을 수 없음");
+          else if (hits.length > 1) x.errors.push("이름이 같은 " + PROGRAM_9988 + " 마을이 " + hits.length + "곳 — 소속수요처ID를 적어 주세요");
+          else sid = row["소속수요처ID"] = str(hits[0]["수요처ID"]);
+        }
+      } else {
         if (!siteMap[sid]) x.errors.push("존재하지 않는 수요처ID 참조: " + sid);
         else if (siteMap[sid]["사업명"] !== PROGRAM_9988) x.errors.push("소속수요처ID " + sid + "은(는) " + PROGRAM_9988 + " 수요처가 아님");
       }
       coordCheck(row, x.errors, x.warnings);
+      if (isBlank(row["개인ID"]) && sid && KINDS.indexOf(row["구분"]) >= 0 && !isBlank(row["표시명"])) {
+        var hitP = null;
+        if (!single) existing.persons.forEach(function (p) {
+          if (!hitP && str(p["소속수요처ID"]) === sid && p["구분"] === row["구분"] && canon(p["표시명"]) === canon(row["표시명"])) hitP = p["개인ID"];
+        });
+        row["개인ID"] = hitP || nextId(ID_PREFIX[row["구분"]], usedIds["9988개인"]);
+        if (!hitP) usedIds["9988개인"].push(row["개인ID"]);
+        x.autoId = true; result.autoIds++; if (hitP) result.autoMatched++; else result.autoNew++;
+      }
+      if (isBlank(row["개인ID"]) && !x.errors.length) x.errors.push("개인ID를 정하지 못함(구분·표시명·소속 마을 확인)");
+      if (!single && !x.errors.length) keepCoords(row, exPersonById[str(row["개인ID"])]);
+      delete row["소속 마을"];
     });
+    dupCheck(personRows, "개인ID", "구분·표시명·소속 마을");
 
+    // ---------- 활동점검 ----------
+    var inspRows = prep("활동점검");
     inspRows.forEach(function (x) {
       var row = x.data;
       var sid = str(row["수요처ID"]);
-      if (sid && !siteMap[sid]) x.errors.push("존재하지 않는 수요처ID 참조: " + sid);
+      if (!sid) {
+        var sname = str(row["수요처명"]);
+        if (!sname) x.errors.push("수요처명(또는 수요처ID) 누락");
+        else {
+          var hits = sitesByName(sname, row["사업명"]);
+          if (!hits.length) x.errors.push("수요처 '" + sname + "'" + (str(row["사업명"]) ? "(" + row["사업명"] + ")" : "") + "을(를) 찾을 수 없음");
+          else if (hits.length > 1) x.errors.push("이름이 같은 수요처가 " + hits.length + "곳 — 사업명 열을 함께 적어 주세요");
+          else sid = row["수요처ID"] = str(hits[0]["수요처ID"]);
+        }
+      } else if (!siteMap[sid]) x.errors.push("존재하지 않는 수요처ID 참조: " + sid);
       if (isBlank(row["점검일자"])) { x.errors.push("점검일자 누락"); row["점검일자"] = ""; }
       else {
         var d = normalizeDate(row["점검일자"]);
@@ -662,7 +801,19 @@ window.NAVER_KEY_ID = "";
       }
       if (!isBlank(row["점검방법"]) && METHODS.indexOf(row["점검방법"]) < 0) x.errors.push("점검방법은 현장방문/전화/기타 중 하나");
       intCheck(row, "확인 활동인원", false, x.errors);
+      if (isBlank(row["점검ID"]) && sid && isRealDate(str(row["점검일자"]))) {
+        var hitI = null;
+        if (!single) existing.inspections.forEach(function (i) {
+          if (!hitI && str(i["수요처ID"]) === sid && str(i["점검일자"]) === row["점검일자"] && canon(i["점검자"]) === canon(row["점검자"]) && canon(i["점검내용"]) === canon(row["점검내용"])) hitI = i["점검ID"];
+        });
+        if (hitI) row["점검ID"] = hitI;
+        else { row["점검ID"] = newInspId ? newInspId() : nextId(ID_PREFIX["활동점검"], usedIds["활동점검"]); usedIds["활동점검"].push(row["점검ID"]); }
+        x.autoId = true; result.autoIds++; if (hitI) result.autoMatched++; else result.autoNew++;
+      }
+      if (isBlank(row["점검ID"]) && !x.errors.length) x.errors.push("점검ID를 정하지 못함(수요처·점검일자 확인)");
+      delete row["수요처명"]; delete row["사업명"];
     });
+    dupCheck(inspRows, "점검ID", "수요처·점검일자·점검자·점검내용");
 
     function pack(rows) {
       var counts = { ok: 0, error: 0, warning: 0 };
@@ -688,6 +839,8 @@ window.NAVER_KEY_ID = "";
         result.mismatches9988.push({ siteId: x.data["수요처ID"], name: x.data["수요처명"], inputP: x.data["참여자수"], countP: c.participants, inputR: x.data["수요자수"], countR: c.recipients });
       }
     });
+    result.geocodeTargets.sites = result.sheets["수요처"].valid.filter(function (r) { return !hasCoords(r) && !isBlank(r["주소"]); }).length;
+    result.geocodeTargets.persons = result.sheets["9988개인"].valid.filter(function (r) { return !hasCoords(r) && !isBlank(r["주소"]); }).length;
     result.totalErrors = ["수요처", "9988개인", "활동점검"].reduce(function (n, k) { return n + result.sheets[k].counts.error; }, 0);
     result.totalWarnings = ["수요처", "9988개인", "활동점검"].reduce(function (n, k) { return n + result.sheets[k].counts.warning; }, 0);
     return result;
@@ -705,7 +858,7 @@ window.NAVER_KEY_ID = "";
     if (sheet === "수요처") existing.sites = others;
     if (sheet === "9988개인") existing.persons = others;
     if (sheet === "활동점검") existing.inspections = others;
-    var res = validateWorkbook(input, { today: ctx.today, existing: existing, mode: "merge" });
+    var res = validateWorkbook(input, { today: ctx.today, existing: existing, mode: "merge", single: true, newInspectionId: ctx.newInspectionId });
     var r = res.sheets[sheet].rows[0];
     // 같은 시트 다른 행과 ID 중복
     var id = str(r.data[ID_KEY[sheet]]);
@@ -721,7 +874,11 @@ window.NAVER_KEY_ID = "";
       var ws = wb.Sheets[name];
       if (!ws) { sheets[name] = null; return; }
       var aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: true, blankrows: false });
-      var headers = (aoa[0] || []).map(function (h) { return str(h); });
+      var known = COLUMNS[name].concat(ALIASES[name] || []);
+      var headers = (aoa[0] || []).map(function (h) {
+        var c = canon(h); for (var k = 0; k < known.length; k++) if (canon(known[k]) === c) return known[k];
+        return str(h);
+      });
       var rows = [];
       for (var i = 1; i < aoa.length; i++) {
         var arr = aoa[i], o = {}, any = false;
@@ -733,12 +890,26 @@ window.NAVER_KEY_ID = "";
     return { sheets: sheets };
   }
 
-  function toAoA(sheet, rows) {
-    var cols = COLUMNS[sheet];
+  function exportColumns(sheet) {
+    var cols = COLUMNS[sheet].slice();
+    if (sheet === "9988개인") cols.splice(cols.indexOf("소속수요처ID") + 1, 0, "소속 마을");
+    if (sheet === "활동점검") cols.splice(cols.indexOf("수요처ID") + 1, 0, "수요처명", "사업명");
+    return cols;
+  }
+  function toAoA(sheet, rows, sites) {
+    var cols = exportColumns(sheet), byId = {};
+    (sites || []).forEach(function (s) { byId[str(s["수요처ID"])] = s; });
     var out = [cols.slice()];
-    (rows || []).forEach(function (r) { out.push(cols.map(function (c) { var v = r[c]; return v == null ? "" : v; })); });
+    (rows || []).forEach(function (r) {
+      out.push(cols.map(function (c) {
+        if (c === "소속 마을") { var s = byId[str(r["소속수요처ID"])]; return s ? s["수요처명"] : ""; }
+        if (sheet === "활동점검" && (c === "수요처명" || c === "사업명")) { var s2 = byId[str(r["수요처ID"])]; return s2 ? s2[c] : ""; }
+        var v = r[c]; return v == null ? "" : v;
+      }));
+    });
     return out;
   }
+  function inputAoA(sheet) { return [INPUT_COLUMNS[sheet].slice()]; }
 
   function dataBounds(sites, persons) {
     var pts = [];
@@ -754,7 +925,7 @@ window.NAVER_KEY_ID = "";
   }
 
   return {
-    PROGRAMS: PROGRAMS, COLUMNS: COLUMNS, REQUIRED: REQUIRED, SHEETS: SHEETS, ID_KEY: ID_KEY,
+    PROGRAMS: PROGRAMS, COLUMNS: COLUMNS, REQUIRED: REQUIRED, INPUT_COLUMNS: INPUT_COLUMNS, UPLOAD_REQ: UPLOAD_REQ, ALIASES: ALIASES, SHEETS: SHEETS, ID_KEY: ID_KEY,
     PROGRAM_9988: PROGRAM_9988, KINDS: KINDS, METHODS: METHODS, KOREA: KOREA, CHEONGJU: CHEONGJU,
     DEFAULT_CENTER: DEFAULT_CENTER, DEFAULT_ZOOM: DEFAULT_ZOOM,
     programColor: programColor, isProgram: isProgram,
@@ -762,7 +933,7 @@ window.NAVER_KEY_ID = "";
     docId: docId, normalizeRow: normalizeRow, checkHeaders: checkHeaders,
     count9988: count9988, siteCounts: siteCounts, latestInspectionDate: latestInspectionDate, nextInspectionId: nextInspectionId,
     mergeById: mergeById, applyPlan: applyPlan, validateWorkbook: validateWorkbook, validateSingle: validateSingle,
-    parseWorkbook: parseWorkbook, toAoA: toAoA, dataBounds: dataBounds, hasCoords: hasCoords
+    parseWorkbook: parseWorkbook, toAoA: toAoA, inputAoA: inputAoA, exportColumns: exportColumns, nextId: nextId, canon: canon, dataBounds: dataBounds, hasCoords: hasCoords
   };
 });
 
@@ -791,6 +962,8 @@ window.NAVER_KEY_ID = "";
     KEY: "sudo-map-v1",
     init: function () {
       var self = this;
+      var cfg = window.FIREBASE_CONFIG;
+      if (cfg && cfg.apiKey && cfg.projectId) return FB.start();
       var hasClaude = window.claude && typeof window.claude.use === "function";
       var p = hasClaude
         ? Promise.all([window.claude.use("db"), window.claude.use("user"), window.claude.use("downloads")]).catch(function () { return [null, null, null]; })
@@ -843,6 +1016,7 @@ window.NAVER_KEY_ID = "";
     // rows 저장(ID 기준 추가·갱신)
     saveRows: function (sheet, rows) {
       var self = this, key = ML.ID_KEY[sheet], coll = this.coll(sheet);
+      if (this.mode === "firebase") return FB.write(coll, rows.map(function (r) { return { op: "set", id: ML.docId(r[key]), data: r }; }));
       if (this.mode === "local") {
         state[coll] = ML.mergeById(state[coll], rows, key); this.saveLocal(); renderAll(); return Promise.resolve();
       }
@@ -853,6 +1027,7 @@ window.NAVER_KEY_ID = "";
     deleteRows: function (sheet, ids) {
       var self = this, key = ML.ID_KEY[sheet], coll = this.coll(sheet);
       var set = {}; ids.forEach(function (i) { set[ML.str(i)] = true; });
+      if (this.mode === "firebase") return FB.write(coll, ids.map(function (id) { return { op: "delete", id: ML.docId(id) }; }));
       if (this.mode === "local") {
         state[coll] = state[coll].filter(function (r) { return !set[ML.str(r[key])]; }); this.saveLocal(); renderAll(); return Promise.resolve();
       }
@@ -897,7 +1072,7 @@ window.NAVER_KEY_ID = "";
   }
 
   function switchTab(name) {
-    ["map", "data", "insp"].forEach(function (t) {
+    ["map", "data", "insp", "admin"].forEach(function (t) {
       var on = t === name; $("tab-" + t).hidden = !on; $("tabBtn-" + t).setAttribute("aria-selected", on ? "true" : "false");
     });
     if (name === "map" && map) setTimeout(resizeMap, 30);
@@ -1024,7 +1199,7 @@ window.NAVER_KEY_ID = "";
     var site = siteById(p["소속수요처ID"]);
     return '<div class="pop"><div class="pop-prog"><span class="dot" style="background:' + ML.programColor(ML.PROGRAM_9988) + '"></span>' + esc(ML.PROGRAM_9988) + ' ' + (p["구분"] === "참여자" ? "● 참여자" : "▲ 수요자") + '</div>' +
       '<h3 class="pop-name">' + esc(p["표시명"]) + '</h3>' +
-      '<dl><dt>소속 마을</dt><dd>' + esc(site ? site["수요처명"] : p["소속수요처ID"]) + '</dd>' + (p["비고"] ? '<dt>비고</dt><dd>' + esc(p["비고"]) + '</dd>' : "") + '</dl>' +
+      '<dl><dt>소속 마을</dt><dd>' + esc(site ? site["수요처명"] : p["소속수요처ID"]) + '</dd>' + (p["주소"] ? '<dt>위치</dt><dd>' + esc(p["주소"]) + '</dd>' : "") + (p["비고"] ? '<dt>비고</dt><dd>' + esc(p["비고"]) + '</dd>' : "") + '</dl>' +
       '<div class="pop-actions"><button type="button" data-act="person-edit" data-id="' + esc(p["개인ID"]) + '">수정</button></div></div>';
   }
 
@@ -1136,6 +1311,12 @@ window.NAVER_KEY_ID = "";
   // ================= 데이터 관리 탭 =================
   function renderStorage() {
     var st = $("storageStatus"), detail = $("storageDetail");
+    if (Store.mode === "firebase") {
+      st.innerHTML = '<span class="pill ok">공유 저장소</span>' + (FB.isAdmin ? '<span class="pill">관리자</span>' : "");
+      detail.textContent = "승인된 직원끼리 같은 데이터를 실시간으로 공유합니다. 입력·수정·삭제는 바로 모든 직원 화면에 반영됩니다. 주기적으로 엑셀 백업을 받아 두세요.";
+      $("localNotice").hidden = true; $("readonlyNotice").hidden = true;
+      document.body.classList.remove("readonly"); return;
+    }
     if (Store.mode === "db") {
       st.innerHTML = '<span class="pill ok">공유 저장소</span>' + (Store.canWrite ? "" : '<span class="pill warn">읽기 전용</span>');
       detail.textContent = "공유 저장소에 저장됩니다(이 페이지를 열 수 있는 사람과 공유). " + (Store.canWrite ? "수정·업로드가 반영됩니다." : "편집 권한이 없어 수정·업로드는 할 수 없습니다.") + " 주기적으로 엑셀로 내려받아 백업하세요.";
@@ -1150,7 +1331,7 @@ window.NAVER_KEY_ID = "";
 
   function emptyStateHtml(what) {
     return '<div class="empty"><p>' + what + ' 데이터가 없습니다. 엑셀 양식을 업로드하거나 직접 추가하세요.</p>' +
-      (SAMPLE ? '<div class="actions needs-write"><button type="button" class="btnLoadSample">샘플 데이터 불러오기(시연용)</button></div>' : "") + '</div>';
+      (SAMPLE && (Store.mode !== "firebase" || FB.isAdmin) ? '<div class="actions needs-write"><button type="button" class="btnLoadSample">샘플 데이터 불러오기(시연용)</button></div>' : "") + '</div>';
   }
   document.addEventListener("click", function (e) {
     if (e.target.classList && e.target.classList.contains("btnLoadSample")) loadSample();
@@ -1204,10 +1385,10 @@ window.NAVER_KEY_ID = "";
     $("personCount").textContent = "(" + rows.length + (sid ? "/" + state.persons.length : "") + "명)";
     var wrap = $("personTableWrap");
     if (!state.persons.length) { wrap.innerHTML = emptyStateHtml("9988행복지키미 개인 위치"); return; }
-    var h = '<table><thead><tr><th>구분</th><th>표시명</th><th>ID</th><th>소속 마을</th><th>좌표</th><th>비고</th><th>작업</th></tr></thead><tbody>';
+    var h = '<table><thead><tr><th>구분</th><th>표시명</th><th>ID</th><th>소속 마을</th><th>주소(대략 위치)</th><th>좌표</th><th>비고</th><th>작업</th></tr></thead><tbody>';
     rows.forEach(function (p) {
       var site = siteById(p["소속수요처ID"]);
-      h += '<tr><td>' + (p["구분"] === "참여자" ? "● 참여자" : "▲ 수요자") + '</td><td><b>' + esc(p["표시명"]) + '</b></td><td>' + esc(p["개인ID"]) + '</td><td>' + esc(site ? site["수요처명"] : p["소속수요처ID"] + " (없는 수요처)") + '</td>' +
+      h += '<tr><td>' + (p["구분"] === "참여자" ? "● 참여자" : "▲ 수요자") + '</td><td><b>' + esc(p["표시명"]) + '</b></td><td>' + esc(p["개인ID"]) + '</td><td>' + esc(site ? site["수요처명"] : p["소속수요처ID"] + " (없는 수요처)") + '</td><td>' + esc(p["주소"]) + '</td>' +
         '<td>' + (ML.hasCoords(p) ? '<span class="badge ok">있음</span>' : '<span class="badge warn">미지정</span>') + '</td><td>' + esc(p["비고"]) + '</td>' +
         '<td class="actions"><button type="button" class="small needs-write" data-edit-person="' + esc(p["개인ID"]) + '">수정</button><button type="button" class="small danger needs-write" data-del-person="' + esc(p["개인ID"]) + '">삭제</button></td></tr>';
     });
@@ -1216,7 +1397,7 @@ window.NAVER_KEY_ID = "";
   function renderNoCoord() {
     var items = [];
     state.sites.forEach(function (s) { if (!ML.hasCoords(s)) items.push({ kind: "site", id: s["수요처ID"], label: "■ " + s["수요처명"] + " (" + s["사업명"] + ")", sub: s["주소"] }); });
-    state.persons.forEach(function (p) { if (!ML.hasCoords(p)) { var st = siteById(p["소속수요처ID"]); items.push({ kind: "person", id: p["개인ID"], label: (p["구분"] === "참여자" ? "● " : "▲ ") + p["표시명"], sub: st ? st["수요처명"] : p["소속수요처ID"] }); } });
+    state.persons.forEach(function (p) { if (!ML.hasCoords(p)) { var st = siteById(p["소속수요처ID"]); items.push({ kind: "person", id: p["개인ID"], label: (p["구분"] === "참여자" ? "● " : "▲ ") + p["표시명"], sub: (st ? st["수요처명"] : p["소속수요처ID"]) + (p["주소"] ? " · " + p["주소"] : " · 주소 없음") }); } });
     $("noCoordCount").textContent = "(" + items.length + "건)";
     var ul = $("noCoordList"); ul.innerHTML = "";
     if (!items.length) { ul.innerHTML = '<li class="muted">좌표 미지정 항목이 없습니다.</li>'; return; }
@@ -1275,23 +1456,45 @@ window.NAVER_KEY_ID = "";
     geocode(addr).then(function (r) { f["위도"].value = r.lat; f["경도"].value = r.lng; msg.textContent = "찾음: " + (r.road || addr) + " → 위치가 맞는지 지도에서 확인하세요."; })
       .catch(function (e) { msg.textContent = e.message; });
   });
-  $("btnGeoAll").addEventListener("click", function () {
-    var targets = state.sites.filter(function (s) { return !ML.hasCoords(s) && ML.str(s["주소"]); });
-    if (!targets.length) { toast("주소가 있는 좌표 미지정 수요처가 없습니다."); return; }
-    if (!LIB_OK.naver) { toast("네이버 지도가 연결되지 않아 주소 검색을 할 수 없습니다."); return; }
-    var ok = [], fail = [];
-    toast(targets.length + "곳 주소 검색 중…");
-    targets.reduce(function (p, s) {
+  // 좌표 없는 행을 주소로 찾아 rows 안의 위도·경도를 채움(순서대로, 0.15초 간격). 결과: {total, ok, fail:[이름], outside:[이름], skipped}
+  function geocodeRows(items, onProgress) {
+    var targets = items.filter(function (it) { return !ML.hasCoords(it.row) && ML.str(it.row["주소"]); });
+    var out = { total: targets.length, ok: 0, fail: [], outside: [], skipped: false };
+    if (!targets.length) return Promise.resolve(out);
+    if (!LIB_OK.naver) { out.skipped = true; out.fail = targets.map(function (it) { return it.name; }); return Promise.resolve(out); }
+    var n = 0, C = ML.CHEONGJU;
+    return targets.reduce(function (p, it) {
       return p.then(function () {
-        return geocode(s["주소"]).then(function (r) { ok.push(Object.assign({}, s, { "위도": r.lat, "경도": r.lng })); })
-          .catch(function () { fail.push(s["수요처명"]); })
-          .then(function () { return new Promise(function (res) { setTimeout(res, 150); }); });
+        return geocode(it.row["주소"]).then(function (r) {
+          it.row["위도"] = r.lat; it.row["경도"] = r.lng; out.ok++;
+          if (r.lat < C.latMin || r.lat > C.latMax || r.lng < C.lngMin || r.lng > C.lngMax) out.outside.push(it.name);
+        }).catch(function () { out.fail.push(it.name); })
+          .then(function () { n++; if (onProgress) onProgress(n, targets.length); return new Promise(function (res) { setTimeout(res, 150); }); });
       });
-    }, Promise.resolve()).then(function () {
-      var save = ok.length ? Store.saveRows("수요처", ok) : Promise.resolve();
-      return save.then(function () {
+    }, Promise.resolve()).then(function () { return out; });
+  }
+  function geoItems(sites, persons) {
+    return (sites || []).map(function (s) { return { row: s, name: "■ " + s["수요처명"] }; })
+      .concat((persons || []).map(function (p) { return { row: p, name: (p["구분"] === "참여자" ? "● " : "▲ ") + p["표시명"] }; }));
+  }
+  function geoSummary(g) {
+    if (!g.total) return "";
+    if (g.skipped) return "\n\n주소 → 위치 변환: 네이버 지도가 연결되지 않아 " + g.total + "건을 변환하지 못했습니다. 지도가 열린 상태에서 [데이터 관리 → 좌표 미지정 → 주소로 좌표 일괄 찾기]를 누르세요.";
+    var s = "\n\n주소 → 위치 변환: 찾음 " + g.ok + "건 / 못 찾음 " + g.fail.length + "건";
+    if (g.fail.length) s += "\n못 찾은 곳: " + g.fail.join(", ") + "\n→ 주소를 도로명 주소로 고치거나 [데이터 관리 → 좌표 미지정]에서 지도를 클릭해 지정하세요.";
+    if (g.outside.length) s += "\n청주 밖으로 찾아진 곳(확인 필요): " + g.outside.join(", ");
+    return s + (g.ok ? "\n자동으로 찾은 위치는 지도에서 한 번씩 확인하세요." : "");
+  }
+  $("btnGeoAll").addEventListener("click", function () {
+    var sites = state.sites.filter(function (s) { return !ML.hasCoords(s) && ML.str(s["주소"]); }).map(function (s) { return Object.assign({}, s); });
+    var persons = state.persons.filter(function (p) { return !ML.hasCoords(p) && ML.str(p["주소"]); }).map(function (p) { return Object.assign({}, p); });
+    if (!sites.length && !persons.length) { toast("주소가 적힌 좌표 미지정 항목이 없습니다."); return; }
+    if (!LIB_OK.naver) { toast("네이버 지도가 연결되지 않아 주소 검색을 할 수 없습니다."); return; }
+    geocodeRows(geoItems(sites, persons), function (n, total) { toast("주소로 위치 찾는 중… " + n + "/" + total); }).then(function (g) {
+      var okS = sites.filter(ML.hasCoords), okP = persons.filter(ML.hasCoords);
+      return Store.saveRows("수요처", okS).then(function () { return Store.saveRows("9988개인", okP); }).then(function () {
         didFit = false; renderMarkers();
-        confirmDialog("주소로 좌표 찾기 결과", "찾음 " + ok.length + "곳 / 못 찾음 " + fail.length + "곳" + (fail.length ? "\n못 찾은 곳: " + fail.join(", ") + "\n(주소를 도로명 주소로 고치거나 [지도에서 위치 지정]을 쓰세요)" : "") + "\n자동으로 찾은 위치는 지도에서 한 번씩 확인하세요.", [{ label: "확인", value: "ok", cls: "primary" }]);
+        confirmDialog("주소로 좌표 찾기 결과", geoSummary(g).replace(/^\n\n/, ""), [{ label: "확인", value: "ok", cls: "primary" }]);
       });
     }).catch(function () {});
   });
@@ -1334,10 +1537,18 @@ window.NAVER_KEY_ID = "";
     f["개인ID"].value = row["개인ID"] || ""; f["개인ID"].readOnly = editing;
     f["구분"].value = row["구분"] || "참여자"; f["표시명"].value = row["표시명"] || "";
     if (row["소속수요처ID"]) f["소속수요처ID"].value = ML.str(row["소속수요처ID"]);
+    f["주소"].value = row["주소"] || ""; $("personGeoMsg").textContent = "주소를 입력하면 위치를 찾아 줍니다";
     f["위도"].value = ML.isBlank(row["위도"]) ? "" : row["위도"]; f["경도"].value = ML.isBlank(row["경도"]) ? "" : row["경도"]; f["비고"].value = row["비고"] || "";
     showErrors("personErrors", []); $("btnPersonDelete").hidden = !editing; f.dataset.originalId = editing ? ML.str(id) : "";
     $("dlgPerson").showModal();
   }
+  $("btnPersonGeo").addEventListener("click", function () {
+    var f = $("formPerson"), addr = f["주소"].value.trim(), msg = $("personGeoMsg");
+    if (!addr) { msg.textContent = "주소를 먼저 입력하세요."; return; }
+    msg.textContent = "검색 중…";
+    geocode(addr).then(function (r) { f["위도"].value = r.lat; f["경도"].value = r.lng; msg.textContent = "찾음: " + (r.road || addr) + " → 위치가 맞는지 지도에서 확인하세요."; })
+      .catch(function (e) { msg.textContent = e.message; });
+  });
   $("btnPersonPick").addEventListener("click", function () { var f = $("formPerson"); var v = formValues(f, "9988개인"); $("dlgPerson").close(); startPick("person", v, f.dataset.originalId || null); });
   $("formPerson").addEventListener("submit", function (e) {
     e.preventDefault();
@@ -1391,7 +1602,7 @@ window.NAVER_KEY_ID = "";
     fillSelect($("f_insp_site"), opts);
     fillSelect($("f_insp_method"), ML.METHODS.map(function (m) { return { value: m, label: m }; }));
     var f = $("formInsp"), today = ML.todayStr();
-    f["점검ID"].value = editing ? row["점검ID"] : ML.nextInspectionId(state.inspections);
+    f["점검ID"].value = editing ? row["점검ID"] : (Store.mode === "firebase" ? FB.newInspectionId() : ML.nextInspectionId(state.inspections));
     f["수요처ID"].value = ML.str(editing ? row["수요처ID"] : (presetSiteId || (opts[0] && opts[0].value)));
     f["점검일자"].value = editing ? ML.str(row["점검일자"]) : today; f["점검일자"].max = today;
     f["점검자"].value = row["점검자"] || ""; f["점검방법"].value = row["점검방법"] || ML.METHODS[0];
@@ -1420,20 +1631,26 @@ window.NAVER_KEY_ID = "";
   $("btnAddInsp").addEventListener("click", function () { openInspDialog(null, $("inspFilterSite").value || null); });
 
   // ================= 엑셀 입·출력 =================
-  function buildWorkbook(data) {
+  function buildWorkbook(data, inputForm) {
     var wb = XLSX.utils.book_new();
-    var guide = [["노인공익활동 수요처 지도 — 데이터 파일"], [BANNER], ["내려받은 날짜", ML.todayStr()], [],
-      ["시트", "열 이름(순서 고정)", "필수 열"]];
-    ML.SHEETS.forEach(function (s) { guide.push([s, ML.COLUMNS[s].join(" | "), ML.REQUIRED[s].join(", ")]); });
+    var guide = [["노인공익활동 수요처 지도 — " + (inputForm ? "입력 양식" : "데이터 백업 파일")], [$("banner").textContent], ["내려받은 날짜", ML.todayStr()], []];
+    if (inputForm) {
+      guide.push(["작성 방법", "번호(ID)·위도·경도는 적지 않습니다. 업로드하면 번호는 자동으로 붙고, 위치는 주소로 자동으로 찾습니다."]);
+      guide.push(["수요처", ML.INPUT_COLUMNS["수요처"].join(" | ")]);
+      guide.push(["9988개인", ML.INPUT_COLUMNS["9988개인"].join(" | ") + "  (소속 마을 = 9988행복지키미 수요처명 그대로)"]);
+      guide.push(["활동점검", ML.INPUT_COLUMNS["활동점검"].join(" | ") + "  (사업명은 같은 이름의 수요처가 여러 곳일 때만)"]);
+    } else {
+      guide.push(["안내", "이 파일을 그대로 다시 올리면 번호(ID) 기준으로 복원·수정됩니다. 번호를 지우면 이름으로 찾아 연결합니다."]);
+    }
     guide.push([]); guide.push(["사업명 목록", ML.PROGRAMS.map(function (p) { return p.name; }).join(", ")]);
-    guide.push(["구분", ML.KINDS.join(" / ")]); guide.push(["점검방법", ML.METHODS.join(" / ")]);
-    guide.push(["좌표", "위도·경도 숫자 입력 또는 웹 화면 [지도에서 위치 지정] 사용. 주소→좌표 자동 변환은 제공하지 않음"]);
-    guide.push(["개인정보", "실명·연락처·생년월일·주민등록번호 입력 금지 (표시명은 가명·이니셜만)"]);
-    var gs = XLSX.utils.aoa_to_sheet(guide); gs["!cols"] = [{ wch: 14 }, { wch: 70 }, { wch: 40 }];
+    guide.push(["구분", ML.KINDS.join(" / ")]); guide.push(["점검방법", ML.METHODS.join(" / ")]); guide.push(["점검일자", "YYYY-MM-DD (예: 2026-10-30)"]);
+    guide.push(["개인정보", "실명·연락처·생년월일·주민등록번호 입력 금지 (표시명은 가명·이니셜만, 개인 주소는 동·리·마을 단위 대략 위치 권장)"]);
+    var gs = XLSX.utils.aoa_to_sheet(guide); gs["!cols"] = [{ wch: 14 }, { wch: 90 }];
     XLSX.utils.book_append_sheet(wb, gs, "안내");
     ML.SHEETS.forEach(function (s) {
-      var ws = XLSX.utils.aoa_to_sheet(ML.toAoA(s, data[s] || []));
-      ws["!cols"] = ML.COLUMNS[s].map(function (c) { return { wch: c.length > 4 ? 14 : 11 }; });
+      var aoa = inputForm ? ML.inputAoA(s) : ML.toAoA(s, data[s] || [], data["수요처"] || state.sites);
+      var ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws["!cols"] = aoa[0].map(function (c) { return { wch: /주소|내용|조치/.test(c) ? 30 : (c.length > 4 ? 14 : 11) }; });
       XLSX.utils.book_append_sheet(wb, ws, s);
     });
     return XLSX.write(wb, { bookType: "xlsx", type: "array" });
@@ -1457,7 +1674,7 @@ window.NAVER_KEY_ID = "";
   $("btnBackupTop").addEventListener("click", exportBackup);
   $("btnTemplate").addEventListener("click", function () {
     if (!LIB_OK.xlsx) { toast("엑셀 라이브러리를 불러오지 못해 내려받을 수 없습니다."); return; }
-    saveFile("수요처지도_빈양식.xlsx", buildWorkbook({}));
+    saveFile("수요처지도_입력양식.xlsx", buildWorkbook({}, true));
   });
 
   // ---- 업로드 ----
@@ -1478,8 +1695,9 @@ window.NAVER_KEY_ID = "";
   function renderUploadResult() {
     var box = $("uploadResult");
     if (!pendingUpload) { box.hidden = true; box.innerHTML = ""; return; }
-    var mode = uploadMode();
-    var res = ML.validateWorkbook(pendingUpload.parsed, { today: ML.todayStr(), existing: { sites: state.sites, persons: state.persons, inspections: state.inspections }, mode: mode });
+    var canReplace = Store.mode !== "firebase" || FB.isAdmin;
+    var mode = canReplace ? uploadMode() : "merge";
+    var res = ML.validateWorkbook(pendingUpload.parsed, { today: ML.todayStr(), existing: { sites: state.sites, persons: state.persons, inspections: state.inspections }, mode: mode, newInspectionId: Store.mode === "firebase" ? FB.newInspectionId : null });
     var h = '<div class="card-head"><h2>업로드 검사 결과 <span class="muted small-text">' + esc(pendingUpload.fileName) + '</span></h2><button type="button" id="btnUploadCancel">취소</button></div><div class="upload-steps">';
     if (!res.ok) {
       h += '<p class="warn-text"><b>중단:</b> 시트 또는 열 이름이 양식과 다릅니다. 아래 항목을 고친 뒤 다시 업로드하세요.</p><ul class="err-list">';
@@ -1488,6 +1706,12 @@ window.NAVER_KEY_ID = "";
       h += "</ul></div>";
       box.innerHTML = h; box.hidden = false; $("btnUploadCancel").addEventListener("click", cancelUpload); return;
     }
+    var gt = res.geocodeTargets.sites + res.geocodeTargets.persons;
+    var notes = [];
+    if (res.autoNew) notes.push('새 번호 자동 부여 <b>' + res.autoNew + '건</b>');
+    if (res.autoMatched) notes.push('이름이 같은 기존 데이터와 연결(수정) <b>' + res.autoMatched + '건</b>');
+    if (gt) notes.push('주소로 위치 찾기 <b>' + gt + '건</b>(수요처 ' + res.geocodeTargets.sites + ' · 개인 ' + res.geocodeTargets.persons + ') — 반영할 때 자동으로 변환합니다');
+    if (notes.length) h += '<p class="small-text">' + notes.join(' · ') + '</p>';
     h += '<div class="summary-grid">';
     ML.SHEETS.forEach(function (s) {
       var c = res.sheets[s].counts;
@@ -1508,7 +1732,7 @@ window.NAVER_KEY_ID = "";
       h += '<p class="small-text" style="color:var(--ok)">오류·경고가 없습니다.</p>';
     }
     h += '<div class="radio-row" role="radiogroup" aria-label="반영 방식"><label><input type="radio" name="uploadMode" value="merge"' + (mode === "merge" ? " checked" : "") + '>ID 기준 추가·갱신 <span class="muted small-text">(같은 ID는 덮어쓰고 나머지는 유지)</span></label>' +
-      '<label><input type="radio" name="uploadMode" value="replace"' + (mode === "replace" ? " checked" : "") + '>전체 교체 <span class="muted small-text">(기존 데이터를 모두 지우고 이 파일로 교체, 확인 2회)</span></label></div>';
+      (canReplace ? '<label><input type="radio" name="uploadMode" value="replace"' + (mode === "replace" ? " checked" : "") + '>전체 교체 <span class="muted small-text">(기존 데이터를 모두 지우고 이 파일로 교체, 확인 2회)</span></label>' : '<span class="muted small-text">전체 교체는 관리자만 할 수 있습니다.</span>') + '</div>';
     var validTotal = ML.SHEETS.reduce(function (n, s) { return n + res.sheets[s].valid.length; }, 0);
     h += '<div class="btn-row">';
     if (res.totalErrors > 0) h += '<p class="warn-text small-text" style="flex-basis:100%">오류 ' + res.totalErrors + '건은 반영되지 않습니다. 정상 행(' + validTotal + '건)만 반영할지 선택하세요.</p>';
@@ -1535,16 +1759,291 @@ window.NAVER_KEY_ID = "";
       if (!v) return;
       var pre = v === "backup" ? exportBackup() : Promise.resolve(true);
       return pre.then(function () {
+        return geocodeRows(geoItems(valid.sites, valid.persons), function (n, total) { toast("주소로 위치 찾는 중… " + n + "/" + total); });
+      }).then(function (geo) {
         didFit = false;
         var work = mode === "replace" ? Store.replaceAll(valid)
           : Store.saveRows("수요처", valid.sites).then(function () { return Store.saveRows("9988개인", valid.persons); }).then(function () { return Store.saveRows("활동점검", valid.inspections); });
         return work.then(function () {
-          toast("반영 완료: 수요처 " + valid.sites.length + "건 · 개인 " + valid.persons.length + "건 · 점검 " + valid.inspections.length + "건" + (res.totalErrors ? " (오류 " + res.totalErrors + "행 제외)" : ""));
+          var head = "반영 완료: 수요처 " + valid.sites.length + "건 · 개인 " + valid.persons.length + "건 · 점검 " + valid.inspections.length + "건" + (res.totalErrors ? " (오류 " + res.totalErrors + "행 제외)" : "");
           cancelUpload();
+          if (geo.total) confirmDialog("업로드 결과", head + geoSummary(geo), [{ label: "확인", value: "ok", cls: "primary" }]); else toast(head);
         });
       });
     }).catch(function () {});
   }
+
+
+  // ================= 공유 저장소(Firebase): 로그인 → 이메일 인증 → 관리자 승인 → 실시간 공유 =================
+  var FB = {
+    VER: "12.19.0",
+    auth: null, fs: null, me: null, isAdmin: false, entered: false,
+    dataUnsubs: [], adminUnsubs: [], memberUnsub: null, reqs: [], members: [],
+    adminEmail: function () { return ML.str(window.ADMIN_EMAIL).toLowerCase(); },
+    myEmail: function () { return this.me && this.me.email ? this.me.email.toLowerCase() : ""; },
+    loadScript: function (src) {
+      return new Promise(function (res, rej) { var s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = function () { rej(new Error(src)); }; document.head.appendChild(s); });
+    },
+    loadSdk: function () {
+      var self = this, files = ["firebase-app-compat.js", "firebase-auth-compat.js", "firebase-firestore-compat.js"];
+      var bases = ["https://www.gstatic.com/firebasejs/" + this.VER + "/", "https://cdn.jsdelivr.net/npm/firebase@" + this.VER + "/"];
+      function tryBase(i) {
+        if (i >= bases.length) return Promise.reject(new Error("sdk"));
+        return files.reduce(function (p, f) { return p.then(function () { return self.loadScript(bases[i] + f); }); }, Promise.resolve())
+          .catch(function () { return tryBase(i + 1); });
+      }
+      return tryBase(0);
+    },
+    start: function () {
+      var self = this;
+      Store.mode = "firebase"; Store.canWrite = true; Store.writeKnown = true;
+      $("banner").textContent = BANNER.replace("공유 링크는 받은 사람 누구나 볼 수 있음", "승인된 직원만 데이터를 볼 수 있음");
+      document.body.classList.add("gated"); Gate.show("loading");
+      $("storageStatus").innerHTML = '<span class="pill">공유 저장소 · 로그인 필요</span>';
+      return this.loadSdk().then(function () {
+        firebase.initializeApp(window.FIREBASE_CONFIG);
+        self.auth = firebase.auth(); self.auth.languageCode = "ko";
+        self.fs = firebase.firestore();
+        self.auth.onAuthStateChanged(function (u) { self.onUser(u); });
+      }).catch(function () {
+        Gate.show("error", "로그인 기능(Firebase)을 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로 고침하세요.");
+      });
+    },
+    stopAll: function () {
+      this.dataUnsubs.concat(this.adminUnsubs).forEach(function (u) { try { u(); } catch (e) {} });
+      if (this.memberUnsub) { try { this.memberUnsub(); } catch (e) {} }
+      this.dataUnsubs = []; this.adminUnsubs = []; this.memberUnsub = null; this.entered = false;
+      state.sites = []; state.persons = []; state.inspections = []; state.loaded = false; didFit = false;
+      this.reqs = []; this.members = [];
+    },
+    onUser: function (u) {
+      var self = this;
+      this.stopAll(); this.me = u; this.isAdmin = false; this.wasRemoved = false; renderUser(); renderAll(); applyRole();
+      if (!u) { Gate.show("login"); return; }
+      if (!u.emailVerified) { Gate.show("verify"); return; }
+      var email = this.myEmail();
+      if (this.adminEmail() && email === this.adminEmail()) { this.isAdmin = true; this.enter(); return; }
+      Gate.show("checking");
+      this.memberUnsub = this.fs.collection("members").doc(email).onSnapshot(function (d) {
+        if (d.exists) { self.wasRemoved = false; if (!self.entered) self.enter(); }
+        else if (self.entered) self.leave("removed");
+        else if (!self.wasRemoved) self.requestAccess();
+      }, function (err) { Gate.show("error", "승인 여부를 확인하지 못했습니다(" + (err && err.code) + "). 새로 고침 후 다시 시도하세요."); });
+    },
+    requestAccess: function () {
+      var email = this.myEmail();
+      this.fs.collection("requests").doc(email).set({ email: email, uid: this.me.uid, requestedAt: firebase.firestore.FieldValue.serverTimestamp() })
+        .then(function () { Gate.show("pending"); })
+        .catch(function (e) { Gate.show("pending", "승인 요청 저장 실패(" + (e && e.code) + "). 관리자에게 이메일 주소를 직접 알려 주세요.", true); });
+    },
+    enter: function () {
+      var self = this;
+      this.entered = true; document.body.classList.remove("gated"); Gate.hide();
+      renderStorage(); applyRole(); renderAll();
+      setTimeout(function () { resizeMap(true); }, 60);
+      var got = {};
+      ["sites", "persons", "inspections"].forEach(function (k) {
+        self.dataUnsubs.push(self.fs.collection(k).onSnapshot(function (snap) {
+          state[k] = snap.docs.map(function (d) { return Object.assign({}, d.data()); });
+          got[k] = true; if (got.sites && got.persons && got.inspections) state.loaded = true;
+          renderAll(); if (pendingUpload) renderUploadResult();
+        }, function (err) {
+          if (err && err.code === "permission-denied") self.leave("removed");
+          else toast("공유 저장소 연결 오류(" + (err && err.code) + "). 새로 고침하세요.");
+        }));
+      });
+      if (this.isAdmin) {
+        this.adminUnsubs.push(this.fs.collection("requests").onSnapshot(function (snap) { self.reqs = snap.docs.map(function (d) { return d.data(); }); renderAdmin(); }, function (e) { toast("승인 요청 목록 오류(" + (e && e.code) + ")"); }));
+        this.adminUnsubs.push(this.fs.collection("members").onSnapshot(function (snap) { self.members = snap.docs.map(function (d) { return d.data(); }); renderAdmin(); }, function (e) { toast("직원 목록 오류(" + (e && e.code) + ")"); }));
+      }
+    },
+    leave: function (why) {
+      var keepMember = this.memberUnsub; this.memberUnsub = null;
+      this.stopAll(); this.memberUnsub = keepMember; this.wasRemoved = true;
+      document.body.classList.add("gated"); renderAll(); applyRole(); Gate.show(why || "removed");
+    },
+    // 여러 건을 400건씩 묶어 저장(일괄 처리)
+    write: function (coll, ops) {
+      var self = this; if (!ops.length) return Promise.resolve();
+      var c = this.fs.collection(coll), ts = firebase.firestore.FieldValue.serverTimestamp(), who = this.myEmail(), chunks = [];
+      for (var i = 0; i < ops.length; i += 400) chunks.push(ops.slice(i, i + 400));
+      return chunks.reduce(function (p, chunk) {
+        return p.then(function () {
+          var b = self.fs.batch();
+          chunk.forEach(function (o) {
+            if (o.op === "delete") b.delete(c.doc(o.id));
+            else b.set(c.doc(o.id), Object.assign({}, o.data, { "_수정자": who, "_수정시각": ts }));
+          });
+          return b.commit();
+        });
+      }, Promise.resolve()).catch(function (e) {
+        toast(e && e.code === "permission-denied" ? "권한이 없어 저장되지 않았습니다. 승인 상태를 확인하세요." : "저장 실패: " + (e && (e.code || e.message)));
+        throw e;
+      });
+    },
+    newInspectionId: function () {
+      var d = new Date(), p = function (n) { return (n < 10 ? "0" : "") + n; };
+      return "I" + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + "-" + Math.random().toString(36).slice(2, 5).toUpperCase();
+    },
+    approve: function (email) {
+      var b = this.fs.batch();
+      b.set(this.fs.collection("members").doc(email), { email: email, approvedAt: firebase.firestore.FieldValue.serverTimestamp(), approvedBy: this.myEmail() });
+      b.delete(this.fs.collection("requests").doc(email));
+      return b.commit();
+    }
+  };
+
+  // ---------- 로그인 화면 ----------
+  var AUTH_MSG = {
+    "auth/invalid-email": "이메일 형식이 올바르지 않습니다.",
+    "auth/missing-email": "이메일을 입력하세요.",
+    "auth/missing-password": "비밀번호를 입력하세요.",
+    "auth/invalid-credential": "이메일 또는 비밀번호가 맞지 않습니다.",
+    "auth/invalid-login-credentials": "이메일 또는 비밀번호가 맞지 않습니다.",
+    "auth/wrong-password": "이메일 또는 비밀번호가 맞지 않습니다.",
+    "auth/user-not-found": "이메일 또는 비밀번호가 맞지 않습니다.",
+    "auth/user-disabled": "사용이 중지된 계정입니다. 관리자에게 문의하세요.",
+    "auth/email-already-in-use": "이미 가입된 이메일입니다. [로그인]으로 들어가세요.",
+    "auth/weak-password": "비밀번호가 너무 짧습니다(8자 이상).",
+    "auth/password-does-not-meet-requirements": "비밀번호 규칙에 맞지 않습니다.",
+    "auth/too-many-requests": "시도가 너무 많습니다. 잠시 후 다시 시도하세요.",
+    "auth/network-request-failed": "인터넷 연결을 확인하세요.",
+    "auth/operation-not-allowed": "이메일/비밀번호 로그인이 아직 켜져 있지 않습니다(Firebase 설정 필요).",
+    "auth/unauthorized-domain": "이 주소가 Firebase '승인된 도메인'에 없습니다(Authentication → 설정 → 승인된 도메인에 추가 필요).",
+    "auth/configuration-not-found": "Firebase에서 Authentication이 아직 시작되지 않았습니다(Authentication → 시작하기 필요)."
+  };
+  function authMsg(e) { return AUTH_MSG[e && e.code] || ("오류: " + (e && (e.code || e.message))); }
+  var Gate = {
+    state: "",
+    show: function (s, msg, isErr) {
+      this.state = s; $("gate").hidden = false;
+      var email = FB.me && FB.me.email ? FB.me.email : "";
+      var T = {
+        loading: ["연결 중", "로그인 기능을 불러오는 중입니다…"],
+        login: ["로그인", "승인된 직원만 수요처 데이터를 볼 수 있습니다. 처음 오셨다면 [회원가입]을 누르세요."],
+        signup: ["회원가입", "기관 업무용 이메일로 가입하세요. 가입 → 인증 메일 확인 → 관리자 승인 순서로 진행됩니다."],
+        verify: ["이메일 인증", email + " 로 인증 메일을 보냈습니다. 메일 속 링크를 누른 다음 아래 [인증 완료]를 누르세요. 메일이 안 보이면 스팸함을 확인하세요."],
+        checking: ["승인 확인 중", "잠시만 기다려 주세요…"],
+        pending: ["관리자 승인 대기", email + " 계정의 승인을 요청했습니다. 관리자가 승인하면 이 화면이 자동으로 열립니다."],
+        removed: ["접근 권한 없음", email + " 계정은 현재 승인되어 있지 않습니다. 필요하면 관리자에게 문의하세요."],
+        error: ["연결 오류", ""]
+      }[s] || ["", ""];
+      $("gateTitle").textContent = T[0]; $("gateDesc").textContent = T[1];
+      var showForm = s === "login" || s === "signup";
+      $("gEmailRow").hidden = !showForm; $("gPwRow").hidden = !showForm; $("gPw2Row").hidden = s !== "signup";
+      $("gPw").setAttribute("autocomplete", s === "signup" ? "new-password" : "current-password");
+      var A = {
+        login: [["로그인", "login", "primary", true], ["회원가입", "toSignup"], ["비밀번호 재설정 메일", "reset"]],
+        signup: [["가입하기", "signup", "primary", true], ["로그인으로 돌아가기", "toLogin"]],
+        verify: [["인증 완료", "verified", "primary"], ["인증 메일 다시 보내기", "resend"], ["로그아웃", "logout"]],
+        pending: [["로그아웃", "logout"]],
+        removed: [["다시 승인 요청", "rerequest", "primary"], ["로그아웃", "logout"]],
+        error: [["새로 고침", "reload", "primary"]]
+      }[s] || [];
+      var box = $("gateActions"); box.innerHTML = "";
+      A.forEach(function (a) {
+        var b = document.createElement("button"); b.type = a[3] ? "submit" : "button"; b.textContent = a[0]; b.dataset.act = a[1]; if (a[2]) b.className = a[2];
+        if (!a[3]) b.addEventListener("click", function () { Gate.act(a[1]); });
+        box.appendChild(b);
+      });
+      if (s === "error") this.msg(msg || "알 수 없는 오류", true); else if (msg) this.msg(msg, isErr); else this.msg("");
+      if (showForm) setTimeout(function () { $("gEmail").focus(); }, 30);
+    },
+    hide: function () { $("gate").hidden = true; this.state = ""; this.msg(""); },
+    msg: function (text, isErr) { var m = $("gateMsg"); m.textContent = text || ""; m.hidden = !text; m.className = "msg" + (text ? (isErr ? " err" : " ok") : ""); },
+    busy: function (on) { $("gateActions").querySelectorAll("button").forEach(function (b) { b.disabled = !!on; }); },
+    act: function (a) {
+      var self = this, email = $("gEmail").value.trim(), pw = $("gPw").value;
+      var done = function () { self.busy(false); }, fail = function (e) { self.busy(false); self.msg(authMsg(e), true); };
+      if (a === "toSignup") { this.show("signup"); return; }
+      if (a === "toLogin") { this.show("login"); return; }
+      if (a === "reload") { location.reload(); return; }
+      if (a === "logout") { FB.auth.signOut(); return; }
+      this.busy(true);
+      if (a === "login") {
+        if (!email || !pw) { fail({ code: !email ? "auth/missing-email" : "auth/missing-password" }); return; }
+        FB.auth.signInWithEmailAndPassword(email, pw).then(done, fail);
+      } else if (a === "signup") {
+        if (!email) { fail({ code: "auth/missing-email" }); return; }
+        if (pw.length < 8) { fail({ code: "auth/weak-password" }); return; }
+        if (pw !== $("gPw2").value) { this.busy(false); this.msg("비밀번호 확인이 일치하지 않습니다.", true); return; }
+        FB.auth.createUserWithEmailAndPassword(email, pw)
+          .then(function (cred) { return cred.user.sendEmailVerification(); })
+          .then(function () { done(); if (self.state === "verify") self.msg("인증 메일을 보냈습니다. 메일함을 확인하세요."); }, fail);
+      } else if (a === "reset") {
+        if (!email) { fail({ code: "auth/missing-email" }); return; }
+        FB.auth.sendPasswordResetEmail(email).then(function () { done(); self.msg("비밀번호 재설정 메일을 보냈습니다(가입된 이메일인 경우). 메일 속 링크로 새 비밀번호를 정하세요."); }, fail);
+      } else if (a === "resend") {
+        FB.me.sendEmailVerification().then(function () { done(); self.msg("인증 메일을 다시 보냈습니다."); }, fail);
+      } else if (a === "verified") {
+        var u = FB.auth.currentUser;
+        u.reload().then(function () { return u.getIdToken(true); }).then(function () {
+          done(); var cu = FB.auth.currentUser;
+          if (cu && cu.emailVerified) FB.onUser(cu); else self.msg("아직 인증이 확인되지 않았습니다. 메일 속 링크를 누른 뒤 다시 시도하세요.", true);
+        }, fail);
+      } else if (a === "rerequest") {
+        done(); FB.wasRemoved = false; FB.requestAccess();
+      }
+    }
+  };
+  $("gateForm").addEventListener("submit", function (e) { e.preventDefault(); Gate.act(Gate.state === "signup" ? "signup" : "login"); });
+  $("btnLogout").addEventListener("click", function () { if (FB.auth) FB.auth.signOut(); });
+  function renderUser() {
+    var on = Store.mode === "firebase" && FB.me;
+    $("userBox").hidden = !on; $("userEmail").textContent = on ? FB.me.email + (FB.isAdmin ? " (관리자)" : "") : "";
+  }
+  function applyRole() {
+    var admin = Store.mode === "firebase" && FB.isAdmin && FB.entered;
+    $("tabBtn-admin").hidden = !admin;
+    if (!admin && !$("tab-admin").hidden) switchTab("map");
+    renderUser();
+  }
+
+  // ---------- 직원 관리(관리자) ----------
+  function fmtTs(ts) {
+    if (!ts || typeof ts.toDate !== "function") return "";
+    var d = ts.toDate(), p = function (n) { return (n < 10 ? "0" : "") + n; };
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+  function renderAdmin() {
+    if (!FB.isAdmin) return;
+    var rl = $("reqList"), ml = $("memList");
+    $("reqCount").textContent = "(" + FB.reqs.length + "건)"; $("memCount").textContent = "(" + FB.members.length + "명)";
+    $("tabBtn-admin").textContent = FB.reqs.length ? "직원 관리 (" + FB.reqs.length + ")" : "직원 관리";
+    rl.innerHTML = FB.reqs.length ? "" : '<li class="empty-row">대기 중인 승인 요청이 없습니다.</li>';
+    FB.reqs.slice().sort(function (a, b) { return ML.str(a.email).localeCompare(ML.str(b.email)); }).forEach(function (r) {
+      var li = document.createElement("li");
+      li.innerHTML = '<div class="who"><b>' + esc(r.email) + '</b><div class="muted small-text">요청 ' + esc(fmtTs(r.requestedAt)) + '</div></div>' +
+        '<button type="button" class="small primary" data-ok>승인</button><button type="button" class="small danger" data-no>거절</button>';
+      li.querySelector("[data-ok]").addEventListener("click", function () {
+        FB.approve(r.email).then(function () { toast("승인했습니다: " + r.email); }, function (e) { toast("승인 실패(" + (e && e.code) + ")"); });
+      });
+      li.querySelector("[data-no]").addEventListener("click", function () {
+        confirmDialog("승인 요청 거절", r.email + " 의 요청을 거절할까요?\n(이 사람은 다시 요청할 수 있습니다)", [{ label: "취소", value: null }, { label: "거절", value: "ok", cls: "danger" }]).then(function (v) {
+          if (v === "ok") FB.fs.collection("requests").doc(r.email).delete().then(function () { toast("거절했습니다."); }, function (e) { toast("실패(" + (e && e.code) + ")"); });
+        });
+      });
+      rl.appendChild(li);
+    });
+    ml.innerHTML = FB.members.length ? "" : '<li class="empty-row">아직 승인된 직원이 없습니다.</li>';
+    FB.members.slice().sort(function (a, b) { return ML.str(a.email).localeCompare(ML.str(b.email)); }).forEach(function (m) {
+      var li = document.createElement("li");
+      li.innerHTML = '<div class="who"><b>' + esc(m.email) + '</b><div class="muted small-text">승인 ' + esc(fmtTs(m.approvedAt)) + (m.approvedBy ? " · " + esc(m.approvedBy) : "") + '</div></div>' +
+        '<button type="button" class="small danger">권한 해제</button>';
+      li.querySelector("button").addEventListener("click", function () {
+        confirmDialog("권한 해제", m.email + " 의 접근 권한을 해제할까요?\n해제하면 그 직원 화면에서 데이터가 바로 사라집니다.", [{ label: "취소", value: null }, { label: "해제", value: "ok", cls: "danger" }]).then(function (v) {
+          if (v === "ok") FB.fs.collection("members").doc(m.email).delete().then(function () { toast("권한을 해제했습니다."); }, function (e) { toast("실패(" + (e && e.code) + ")"); });
+        });
+      });
+      ml.appendChild(li);
+    });
+    $("adminNote").textContent = "관리자 계정: " + FB.adminEmail() + " (Firestore 보안 규칙에 고정되어 있어 이 화면에서는 바꿀 수 없습니다)";
+  }
+  $("btnAddMember").addEventListener("click", function () {
+    var v = $("addMemberEmail").value.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { toast("이메일 형식을 확인하세요."); return; }
+    FB.approve(v).then(function () { $("addMemberEmail").value = ""; toast("추가했습니다: " + v + " (그 이메일로 가입·인증하면 바로 들어올 수 있습니다)"); }, function (e) { toast("추가 실패(" + (e && e.code) + ")"); });
+  });
 
   // ================= 전체 렌더 =================
   function renderAll() {
@@ -1560,7 +2059,7 @@ window.NAVER_KEY_ID = "";
   renderAll();
   if (!LIB_OK.xlsx) toast("엑셀 라이브러리를 불러오지 못했습니다. 업로드·내려받기를 쓸 수 없습니다.");
   Store.init();
-  window.__sudoMapDebug = { Store: Store, state: state, libs: LIB_OK };
+  window.__sudoMapDebug = { Store: Store, state: state, libs: LIB_OK, FB: FB };
 })();
 </script>
 </body>
