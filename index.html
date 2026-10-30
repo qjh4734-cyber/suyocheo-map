@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>수요처 활동 지도 v2.0</title>
+<title>수요처 활동 지도 v2.1</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
 /* 레이아웃: 상단 안내띠(sticky) → 헤더 → 탭 3개 → 패널. 지도 패널은 왼쪽 범례·검색 / 오른쪽 지도, 좁은 화면에서는 세로로 쌓임. */
@@ -193,11 +193,11 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
 
 <header class="app-header">
   <div>
-    <h1>노인공익활동 수요처 지도 <span class="ver">v2.0</span></h1>
+    <h1>노인공익활동 수요처 지도 <span class="ver">v2.1</span></h1>
     <p class="sub">2027년 노인공익활동 사업 10개 · 수요처(■) / 9988행복지키미 참여자(●)·수요자(▲) · 활동점검 기록</p>
   </div>
   <div class="status" id="storageStatus"><span class="pill">저장 위치 확인 중…</span></div>
-  <div class="userbox" id="userBox" hidden><span id="userEmail"></span><button type="button" id="btnLogout">로그아웃</button></div>
+  <div class="userbox" id="userBox" hidden><span id="userEmail"></span><button type="button" id="btnLogout">이 기기에서 나가기</button></div>
 </header>
 
 <section id="gate" class="gate" hidden aria-live="polite">
@@ -206,9 +206,8 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
     <p id="gateDesc" class="muted small-text"></p>
     <div id="gateMsg" class="msg" hidden></div>
     <form id="gateForm" novalidate>
-      <div class="field" id="gEmailRow"><label for="gEmail">이메일</label><input type="email" id="gEmail" autocomplete="username"></div>
-      <div class="field" id="gPwRow"><label for="gPw">비밀번호</label><input type="password" id="gPw" autocomplete="current-password"></div>
-      <div class="field" id="gPw2Row" hidden><label for="gPw2">비밀번호 확인</label><input type="password" id="gPw2" autocomplete="new-password"><span class="hint">8자 이상</span></div>
+      <div class="field" id="gCodeRow"><label for="gCode">기관 코드</label><input type="password" id="gCode" autocomplete="off" spellcheck="false" placeholder="관리자에게 받은 코드"><label class="small-text muted" style="font-weight:400"><input type="checkbox" id="gShow"> 코드 보이기</label></div>
+      <div class="field" id="gWhoRow"><label for="gWho">이름 (기록용, 선택)</label><input type="text" id="gWho" autocomplete="name" placeholder="예: 홍길동 — 누가 입력·수정했는지 남깁니다"></div>
       <div class="gate-actions" id="gateActions"></div>
     </form>
   </div>
@@ -226,7 +225,6 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
   <button type="button" role="tab" id="tabBtn-map" aria-selected="true" aria-controls="tab-map" data-tab="map">지도</button>
   <button type="button" role="tab" id="tabBtn-data" aria-selected="false" aria-controls="tab-data" data-tab="data">데이터 관리</button>
   <button type="button" role="tab" id="tabBtn-insp" aria-selected="false" aria-controls="tab-insp" data-tab="insp">활동점검</button>
-  <button type="button" role="tab" id="tabBtn-admin" aria-selected="false" aria-controls="tab-admin" data-tab="admin" hidden>직원 관리</button>
 </nav>
 
 <main>
@@ -319,22 +317,6 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
         </div>
       </div>
       <div class="table-wrap" id="inspTableWrap"></div>
-    </div>
-  </section>
-  <!-- ===== 직원 관리(관리자 전용) ===== -->
-  <section id="tab-admin" class="panel" role="tabpanel" aria-labelledby="tabBtn-admin" hidden>
-    <div class="cards">
-      <div class="card">
-        <div class="card-head"><h2>승인 요청 <span class="muted" id="reqCount"></span></h2></div>
-        <p class="muted small-text" style="margin-bottom:10px">회원가입과 이메일 인증을 마친 사람이 여기에 나타납니다. 기관 직원이 맞는지 확인한 뒤 승인하세요.</p>
-        <ul class="admin-list" id="reqList"></ul>
-      </div>
-      <div class="card">
-        <div class="card-head"><h2>승인된 직원 <span class="muted" id="memCount"></span></h2></div>
-        <ul class="admin-list" id="memList"></ul>
-        <div class="key-box" style="margin-top:12px"><input type="email" id="addMemberEmail" placeholder="직원 이메일을 직접 추가" aria-label="직원 이메일"><button type="button" id="btnAddMember">추가</button></div>
-        <p class="muted small-text" style="margin-top:8px" id="adminNote"></p>
-      </div>
     </div>
   </section>
 </main>
@@ -441,8 +423,7 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
 window.NAVER_KEY_ID = "uv443wo2ie";
 /* Firebase(공유 저장소) 설정: 콘솔의 firebaseConfig 중괄호 내용. 비워 두면(null) 이 브라우저에만 저장하는 방식으로 동작 */
 window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "authDomain": "suyocheo-map.firebaseapp.com", "projectId": "suyocheo-map", "storageBucket": "suyocheo-map.firebasestorage.app", "messagingSenderId": "880850823660", "appId": "1:880850823660:web:0a04034e63ea5d5028f8c9"};
-/* 관리자 이메일: 직원 승인 권한. Firestore 보안 규칙의 관리자 이메일과 반드시 같아야 함 */
-window.ADMIN_EMAIL = "qjh4734@gmail.com";
+/* 기관 코드는 이 파일에 넣지 않습니다. Firestore 보안 규칙(서버)에만 있고, 직원은 처음 한 번 화면에서 입력합니다. */
 /* ===================================================================== */
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1072,7 +1053,7 @@ window.ADMIN_EMAIL = "qjh4734@gmail.com";
   }
 
   function switchTab(name) {
-    ["map", "data", "insp", "admin"].forEach(function (t) {
+    ["map", "data", "insp"].forEach(function (t) {
       var on = t === name; $("tab-" + t).hidden = !on; $("tabBtn-" + t).setAttribute("aria-selected", on ? "true" : "false");
     });
     if (name === "map" && map) setTimeout(resizeMap, 30);
@@ -1312,8 +1293,8 @@ window.ADMIN_EMAIL = "qjh4734@gmail.com";
   function renderStorage() {
     var st = $("storageStatus"), detail = $("storageDetail");
     if (Store.mode === "firebase") {
-      st.innerHTML = '<span class="pill ok">공유 저장소</span>' + (FB.isAdmin ? '<span class="pill">관리자</span>' : "");
-      detail.textContent = "승인된 직원끼리 같은 데이터를 실시간으로 공유합니다. 입력·수정·삭제는 바로 모든 직원 화면에 반영됩니다. 주기적으로 엑셀 백업을 받아 두세요.";
+      st.innerHTML = '<span class="pill ok">공유 저장소</span>';
+      detail.textContent = "기관 코드를 입력한 직원끼리 같은 데이터를 실시간으로 공유합니다. 입력·수정·삭제는 바로 모든 직원 화면에 반영됩니다. 주기적으로 엑셀 백업을 받아 두세요.";
       $("localNotice").hidden = true; $("readonlyNotice").hidden = true;
       document.body.classList.remove("readonly"); return;
     }
@@ -1331,7 +1312,7 @@ window.ADMIN_EMAIL = "qjh4734@gmail.com";
 
   function emptyStateHtml(what) {
     return '<div class="empty"><p>' + what + ' 데이터가 없습니다. 엑셀 양식을 업로드하거나 직접 추가하세요.</p>' +
-      (SAMPLE && (Store.mode !== "firebase" || FB.isAdmin) ? '<div class="actions needs-write"><button type="button" class="btnLoadSample">샘플 데이터 불러오기(시연용)</button></div>' : "") + '</div>';
+      (SAMPLE && Store.mode !== "firebase" ? '<div class="actions needs-write"><button type="button" class="btnLoadSample">샘플 데이터 불러오기(시연용)</button></div>' : "") + '</div>';
   }
   document.addEventListener("click", function (e) {
     if (e.target.classList && e.target.classList.contains("btnLoadSample")) loadSample();
@@ -1774,18 +1755,19 @@ window.ADMIN_EMAIL = "qjh4734@gmail.com";
   }
 
 
-  // ================= 공유 저장소(Firebase): 로그인 → 이메일 인증 → 관리자 승인 → 실시간 공유 =================
+  // ================= 공유 저장소(Firebase) — 기관 공용 코드 방식 =================
+  // 데이터 위치: spaces/{기관 코드}/sites · persons · inspections. 보안 규칙이 정확한 코드일 때만 읽기·쓰기를 허용.
+  function lsGet(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
   var FB = {
-    VER: "12.19.0",
-    auth: null, fs: null, me: null, isAdmin: false, entered: false,
-    dataUnsubs: [], adminUnsubs: [], memberUnsub: null, reqs: [], members: [],
-    adminEmail: function () { return ML.str(window.ADMIN_EMAIL).toLowerCase(); },
-    myEmail: function () { return this.me && this.me.email ? this.me.email.toLowerCase() : ""; },
+    VER: "12.19.0", fs: null, code: "", who: "", entered: false, isAdmin: true, dataUnsubs: [],
+    KEY_CODE: "suyocheo-org-code", KEY_WHO: "suyocheo-writer",
     loadScript: function (src) {
       return new Promise(function (res, rej) { var s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = function () { rej(new Error(src)); }; document.head.appendChild(s); });
     },
     loadSdk: function () {
-      var self = this, files = ["firebase-app-compat.js", "firebase-auth-compat.js", "firebase-firestore-compat.js"];
+      var self = this, files = ["firebase-app-compat.js", "firebase-firestore-compat.js"];
       var bases = ["https://www.gstatic.com/firebasejs/" + this.VER + "/", "https://cdn.jsdelivr.net/npm/firebase@" + this.VER + "/"];
       function tryBase(i) {
         if (i >= bases.length) return Promise.reject(new Error("sdk"));
@@ -1797,75 +1779,65 @@ window.ADMIN_EMAIL = "qjh4734@gmail.com";
     start: function () {
       var self = this;
       Store.mode = "firebase"; Store.canWrite = true; Store.writeKnown = true;
-      $("banner").textContent = BANNER.replace("공유 링크는 받은 사람 누구나 볼 수 있음", "승인된 직원만 데이터를 볼 수 있음");
+      $("banner").textContent = BANNER.replace("공유 링크는 받은 사람 누구나 볼 수 있음", "기관 코드를 아는 직원만 데이터를 볼 수 있음");
       document.body.classList.add("gated"); Gate.show("loading");
-      $("storageStatus").innerHTML = '<span class="pill">공유 저장소 · 로그인 필요</span>';
+      $("storageStatus").innerHTML = '<span class="pill">공유 저장소 · 기관 코드 필요</span>';
+      this.who = lsGet(this.KEY_WHO);
       return this.loadSdk().then(function () {
         firebase.initializeApp(window.FIREBASE_CONFIG);
-        self.auth = firebase.auth(); self.auth.languageCode = "ko";
         self.fs = firebase.firestore();
-        self.auth.onAuthStateChanged(function (u) { self.onUser(u); });
+        var saved = lsGet(self.KEY_CODE);
+        if (saved) self.tryCode(saved, true); else Gate.show("code");
       }).catch(function () {
-        Gate.show("error", "로그인 기능(Firebase)을 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로 고침하세요.");
+        Gate.show("error", "공유 저장소(Firebase)를 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로 고침하세요.");
+      });
+    },
+    col: function (k) { return this.fs.collection("spaces").doc(this.code).collection(k); },
+    tryCode: function (code, silent) {
+      var self = this; code = ML.str(code);
+      if (!code) { Gate.msg("기관 코드를 입력하세요.", true); return; }
+      if (code.indexOf("/") >= 0) { Gate.msg("기관 코드가 맞지 않습니다.", true); return; }
+      Gate.busy(true); if (!silent) Gate.msg("확인 중…");
+      this.fs.collection("spaces").doc(code).collection("sites").limit(1).get().then(function () {
+        Gate.busy(false); self.code = code; lsSet(self.KEY_CODE, code); self.enter();
+      }, function (e) {
+        Gate.busy(false);
+        if (e && e.code === "permission-denied") { lsDel(self.KEY_CODE); Gate.show("code", silent ? "저장돼 있던 기관 코드가 바뀌었습니다. 새 코드를 입력하세요." : "기관 코드가 맞지 않습니다. 대·소문자와 하이픈(-)까지 정확히 입력하세요.", true); }
+        else Gate.show("code", "공유 저장소에 연결하지 못했습니다(" + (e && e.code) + "). 인터넷 연결이나 Firestore 설정을 확인하세요.", true);
       });
     },
     stopAll: function () {
-      this.dataUnsubs.concat(this.adminUnsubs).forEach(function (u) { try { u(); } catch (e) {} });
-      if (this.memberUnsub) { try { this.memberUnsub(); } catch (e) {} }
-      this.dataUnsubs = []; this.adminUnsubs = []; this.memberUnsub = null; this.entered = false;
+      this.dataUnsubs.forEach(function (u) { try { u(); } catch (e) {} });
+      this.dataUnsubs = []; this.entered = false;
       state.sites = []; state.persons = []; state.inspections = []; state.loaded = false; didFit = false;
-      this.reqs = []; this.members = [];
-    },
-    onUser: function (u) {
-      var self = this;
-      this.stopAll(); this.me = u; this.isAdmin = false; this.wasRemoved = false; renderUser(); renderAll(); applyRole();
-      if (!u) { Gate.show("login"); return; }
-      if (!u.emailVerified) { Gate.show("verify"); return; }
-      var email = this.myEmail();
-      if (this.adminEmail() && email === this.adminEmail()) { this.isAdmin = true; this.enter(); return; }
-      Gate.show("checking");
-      this.memberUnsub = this.fs.collection("members").doc(email).onSnapshot(function (d) {
-        if (d.exists) { self.wasRemoved = false; if (!self.entered) self.enter(); }
-        else if (self.entered) self.leave("removed");
-        else if (!self.wasRemoved) self.requestAccess();
-      }, function (err) { Gate.show("error", "승인 여부를 확인하지 못했습니다(" + (err && err.code) + "). 새로 고침 후 다시 시도하세요."); });
-    },
-    requestAccess: function () {
-      var email = this.myEmail();
-      this.fs.collection("requests").doc(email).set({ email: email, uid: this.me.uid, requestedAt: firebase.firestore.FieldValue.serverTimestamp() })
-        .then(function () { Gate.show("pending"); })
-        .catch(function (e) { Gate.show("pending", "승인 요청 저장 실패(" + (e && e.code) + "). 관리자에게 이메일 주소를 직접 알려 주세요.", true); });
     },
     enter: function () {
       var self = this;
-      this.entered = true; document.body.classList.remove("gated"); Gate.hide();
-      renderStorage(); applyRole(); renderAll();
+      this.stopAll(); this.entered = true;
+      document.body.classList.remove("gated"); Gate.hide();
+      renderStorage(); renderUser(); renderAll();
       setTimeout(function () { resizeMap(true); }, 60);
       var got = {};
       ["sites", "persons", "inspections"].forEach(function (k) {
-        self.dataUnsubs.push(self.fs.collection(k).onSnapshot(function (snap) {
+        self.dataUnsubs.push(self.col(k).onSnapshot(function (snap) {
           state[k] = snap.docs.map(function (d) { return Object.assign({}, d.data()); });
           got[k] = true; if (got.sites && got.persons && got.inspections) state.loaded = true;
           renderAll(); if (pendingUpload) renderUploadResult();
         }, function (err) {
-          if (err && err.code === "permission-denied") self.leave("removed");
+          if (err && err.code === "permission-denied") { lsDel(self.KEY_CODE); self.leave("기관 코드가 바뀌었습니다. 관리자에게 새 코드를 받아 입력하세요."); }
           else toast("공유 저장소 연결 오류(" + (err && err.code) + "). 새로 고침하세요.");
         }));
       });
-      if (this.isAdmin) {
-        this.adminUnsubs.push(this.fs.collection("requests").onSnapshot(function (snap) { self.reqs = snap.docs.map(function (d) { return d.data(); }); renderAdmin(); }, function (e) { toast("승인 요청 목록 오류(" + (e && e.code) + ")"); }));
-        this.adminUnsubs.push(this.fs.collection("members").onSnapshot(function (snap) { self.members = snap.docs.map(function (d) { return d.data(); }); renderAdmin(); }, function (e) { toast("직원 목록 오류(" + (e && e.code) + ")"); }));
-      }
     },
-    leave: function (why) {
-      var keepMember = this.memberUnsub; this.memberUnsub = null;
-      this.stopAll(); this.memberUnsub = keepMember; this.wasRemoved = true;
-      document.body.classList.add("gated"); renderAll(); applyRole(); Gate.show(why || "removed");
+    leave: function (msg) {
+      this.stopAll(); this.code = "";
+      document.body.classList.add("gated"); renderUser(); renderAll(); Gate.show("code", msg, !!msg);
     },
-    // 여러 건을 400건씩 묶어 저장(일괄 처리)
+    exit: function () { lsDel(this.KEY_CODE); this.leave("이 기기에서 나갔습니다. 다시 들어오려면 기관 코드를 입력하세요."); },
+    // 여러 건을 400건씩 묶어 저장(일괄 처리). 누가 언제 고쳤는지 함께 기록
     write: function (coll, ops) {
       var self = this; if (!ops.length) return Promise.resolve();
-      var c = this.fs.collection(coll), ts = firebase.firestore.FieldValue.serverTimestamp(), who = this.myEmail(), chunks = [];
+      var c = this.col(coll), ts = firebase.firestore.FieldValue.serverTimestamp(), who = this.who || "이름 미입력", chunks = [];
       for (var i = 0; i < ops.length; i += 400) chunks.push(ops.slice(i, i + 400));
       return chunks.reduce(function (p, chunk) {
         return p.then(function () {
@@ -1877,173 +1849,59 @@ window.ADMIN_EMAIL = "qjh4734@gmail.com";
           return b.commit();
         });
       }, Promise.resolve()).catch(function (e) {
-        toast(e && e.code === "permission-denied" ? "권한이 없어 저장되지 않았습니다. 승인 상태를 확인하세요." : "저장 실패: " + (e && (e.code || e.message)));
+        toast(e && e.code === "permission-denied" ? "기관 코드가 맞지 않아 저장되지 않았습니다." : "저장 실패: " + (e && (e.code || e.message)));
         throw e;
       });
     },
     newInspectionId: function () {
       var d = new Date(), p = function (n) { return (n < 10 ? "0" : "") + n; };
       return "I" + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + "-" + Math.random().toString(36).slice(2, 5).toUpperCase();
-    },
-    approve: function (email) {
-      var b = this.fs.batch();
-      b.set(this.fs.collection("members").doc(email), { email: email, approvedAt: firebase.firestore.FieldValue.serverTimestamp(), approvedBy: this.myEmail() });
-      b.delete(this.fs.collection("requests").doc(email));
-      return b.commit();
     }
   };
 
-  // ---------- 로그인 화면 ----------
-  var AUTH_MSG = {
-    "auth/invalid-email": "이메일 형식이 올바르지 않습니다.",
-    "auth/missing-email": "이메일을 입력하세요.",
-    "auth/missing-password": "비밀번호를 입력하세요.",
-    "auth/invalid-credential": "이메일 또는 비밀번호가 맞지 않습니다.",
-    "auth/invalid-login-credentials": "이메일 또는 비밀번호가 맞지 않습니다.",
-    "auth/wrong-password": "이메일 또는 비밀번호가 맞지 않습니다.",
-    "auth/user-not-found": "이메일 또는 비밀번호가 맞지 않습니다.",
-    "auth/user-disabled": "사용이 중지된 계정입니다. 관리자에게 문의하세요.",
-    "auth/email-already-in-use": "이미 가입된 이메일입니다. [로그인]으로 들어가세요.",
-    "auth/weak-password": "비밀번호가 너무 짧습니다(8자 이상).",
-    "auth/password-does-not-meet-requirements": "비밀번호 규칙에 맞지 않습니다.",
-    "auth/too-many-requests": "시도가 너무 많습니다. 잠시 후 다시 시도하세요.",
-    "auth/network-request-failed": "인터넷 연결을 확인하세요.",
-    "auth/operation-not-allowed": "이메일/비밀번호 로그인이 아직 켜져 있지 않습니다(Firebase 설정 필요).",
-    "auth/unauthorized-domain": "이 주소가 Firebase '승인된 도메인'에 없습니다(Authentication → 설정 → 승인된 도메인에 추가 필요).",
-    "auth/configuration-not-found": "Firebase에서 Authentication이 아직 시작되지 않았습니다(Authentication → 시작하기 필요)."
-  };
-  function authMsg(e) { return AUTH_MSG[e && e.code] || ("오류: " + (e && (e.code || e.message))); }
+  // ---------- 입장 화면(기관 코드) ----------
   var Gate = {
     state: "",
     show: function (s, msg, isErr) {
       this.state = s; $("gate").hidden = false;
-      var email = FB.me && FB.me.email ? FB.me.email : "";
       var T = {
-        loading: ["연결 중", "로그인 기능을 불러오는 중입니다…"],
-        login: ["로그인", "승인된 직원만 수요처 데이터를 볼 수 있습니다. 처음 오셨다면 [회원가입]을 누르세요."],
-        signup: ["회원가입", "기관 업무용 이메일로 가입하세요. 가입 → 인증 메일 확인 → 관리자 승인 순서로 진행됩니다."],
-        verify: ["이메일 인증", email + " 로 인증 메일을 보냈습니다. 메일 속 링크를 누른 다음 아래 [인증 완료]를 누르세요. 메일이 안 보이면 스팸함을 확인하세요."],
-        checking: ["승인 확인 중", "잠시만 기다려 주세요…"],
-        pending: ["관리자 승인 대기", email + " 계정의 승인을 요청했습니다. 관리자가 승인하면 이 화면이 자동으로 열립니다."],
-        removed: ["접근 권한 없음", email + " 계정은 현재 승인되어 있지 않습니다. 필요하면 관리자에게 문의하세요."],
+        loading: ["연결 중", "공유 저장소에 연결하는 중입니다…"],
+        code: ["기관 코드 입력", "관리자에게 받은 기관 코드를 입력하세요. 이 기기에서는 처음 한 번만 입력하면 됩니다."],
         error: ["연결 오류", ""]
       }[s] || ["", ""];
       $("gateTitle").textContent = T[0]; $("gateDesc").textContent = T[1];
-      var showForm = s === "login" || s === "signup";
-      $("gEmailRow").hidden = !showForm; $("gPwRow").hidden = !showForm; $("gPw2Row").hidden = s !== "signup";
-      $("gPw").setAttribute("autocomplete", s === "signup" ? "new-password" : "current-password");
-      var A = {
-        login: [["로그인", "login", "primary", true], ["회원가입", "toSignup"], ["비밀번호 재설정 메일", "reset"]],
-        signup: [["가입하기", "signup", "primary", true], ["로그인으로 돌아가기", "toLogin"]],
-        verify: [["인증 완료", "verified", "primary"], ["인증 메일 다시 보내기", "resend"], ["로그아웃", "logout"]],
-        pending: [["로그아웃", "logout"]],
-        removed: [["다시 승인 요청", "rerequest", "primary"], ["로그아웃", "logout"]],
-        error: [["새로 고침", "reload", "primary"]]
-      }[s] || [];
+      var showForm = s === "code";
+      $("gCodeRow").hidden = !showForm; $("gWhoRow").hidden = !showForm;
+      if (showForm) { $("gCode").value = ""; $("gWho").value = FB.who || ""; }
+      var A = { code: [["들어가기", "enter", "primary", true]], error: [["새로 고침", "reload", "primary"]] }[s] || [];
       var box = $("gateActions"); box.innerHTML = "";
       A.forEach(function (a) {
-        var b = document.createElement("button"); b.type = a[3] ? "submit" : "button"; b.textContent = a[0]; b.dataset.act = a[1]; if (a[2]) b.className = a[2];
-        if (!a[3]) b.addEventListener("click", function () { Gate.act(a[1]); });
+        var b = document.createElement("button"); b.type = a[3] ? "submit" : "button"; b.textContent = a[0]; if (a[2]) b.className = a[2];
+        if (!a[3]) b.addEventListener("click", function () { if (a[1] === "reload") location.reload(); });
         box.appendChild(b);
       });
-      if (s === "error") this.msg(msg || "알 수 없는 오류", true); else if (msg) this.msg(msg, isErr); else this.msg("");
-      if (showForm) setTimeout(function () { $("gEmail").focus(); }, 30);
+      if (s === "error") this.msg(msg || "알 수 없는 오류", true); else this.msg(msg || "", isErr);
+      if (showForm) setTimeout(function () { $("gCode").focus(); }, 30);
     },
     hide: function () { $("gate").hidden = true; this.state = ""; this.msg(""); },
     msg: function (text, isErr) { var m = $("gateMsg"); m.textContent = text || ""; m.hidden = !text; m.className = "msg" + (text ? (isErr ? " err" : " ok") : ""); },
-    busy: function (on) { $("gateActions").querySelectorAll("button").forEach(function (b) { b.disabled = !!on; }); },
-    act: function (a) {
-      var self = this, email = $("gEmail").value.trim(), pw = $("gPw").value;
-      var done = function () { self.busy(false); }, fail = function (e) { self.busy(false); self.msg(authMsg(e), true); };
-      if (a === "toSignup") { this.show("signup"); return; }
-      if (a === "toLogin") { this.show("login"); return; }
-      if (a === "reload") { location.reload(); return; }
-      if (a === "logout") { FB.auth.signOut(); return; }
-      this.busy(true);
-      if (a === "login") {
-        if (!email || !pw) { fail({ code: !email ? "auth/missing-email" : "auth/missing-password" }); return; }
-        FB.auth.signInWithEmailAndPassword(email, pw).then(done, fail);
-      } else if (a === "signup") {
-        if (!email) { fail({ code: "auth/missing-email" }); return; }
-        if (pw.length < 8) { fail({ code: "auth/weak-password" }); return; }
-        if (pw !== $("gPw2").value) { this.busy(false); this.msg("비밀번호 확인이 일치하지 않습니다.", true); return; }
-        FB.auth.createUserWithEmailAndPassword(email, pw)
-          .then(function (cred) { return cred.user.sendEmailVerification(); })
-          .then(function () { done(); if (self.state === "verify") self.msg("인증 메일을 보냈습니다. 메일함을 확인하세요."); }, fail);
-      } else if (a === "reset") {
-        if (!email) { fail({ code: "auth/missing-email" }); return; }
-        FB.auth.sendPasswordResetEmail(email).then(function () { done(); self.msg("비밀번호 재설정 메일을 보냈습니다(가입된 이메일인 경우). 메일 속 링크로 새 비밀번호를 정하세요."); }, fail);
-      } else if (a === "resend") {
-        FB.me.sendEmailVerification().then(function () { done(); self.msg("인증 메일을 다시 보냈습니다."); }, fail);
-      } else if (a === "verified") {
-        var u = FB.auth.currentUser;
-        u.reload().then(function () { return u.getIdToken(true); }).then(function () {
-          done(); var cu = FB.auth.currentUser;
-          if (cu && cu.emailVerified) FB.onUser(cu); else self.msg("아직 인증이 확인되지 않았습니다. 메일 속 링크를 누른 뒤 다시 시도하세요.", true);
-        }, fail);
-      } else if (a === "rerequest") {
-        done(); FB.wasRemoved = false; FB.requestAccess();
-      }
-    }
+    busy: function (on) { $("gateActions").querySelectorAll("button").forEach(function (b) { b.disabled = !!on; }); }
   };
-  $("gateForm").addEventListener("submit", function (e) { e.preventDefault(); Gate.act(Gate.state === "signup" ? "signup" : "login"); });
-  $("btnLogout").addEventListener("click", function () { if (FB.auth) FB.auth.signOut(); });
-  function renderUser() {
-    var on = Store.mode === "firebase" && FB.me;
-    $("userBox").hidden = !on; $("userEmail").textContent = on ? FB.me.email + (FB.isAdmin ? " (관리자)" : "") : "";
-  }
-  function applyRole() {
-    var admin = Store.mode === "firebase" && FB.isAdmin && FB.entered;
-    $("tabBtn-admin").hidden = !admin;
-    if (!admin && !$("tab-admin").hidden) switchTab("map");
-    renderUser();
-  }
-
-  // ---------- 직원 관리(관리자) ----------
-  function fmtTs(ts) {
-    if (!ts || typeof ts.toDate !== "function") return "";
-    var d = ts.toDate(), p = function (n) { return (n < 10 ? "0" : "") + n; };
-    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
-  }
-  function renderAdmin() {
-    if (!FB.isAdmin) return;
-    var rl = $("reqList"), ml = $("memList");
-    $("reqCount").textContent = "(" + FB.reqs.length + "건)"; $("memCount").textContent = "(" + FB.members.length + "명)";
-    $("tabBtn-admin").textContent = FB.reqs.length ? "직원 관리 (" + FB.reqs.length + ")" : "직원 관리";
-    rl.innerHTML = FB.reqs.length ? "" : '<li class="empty-row">대기 중인 승인 요청이 없습니다.</li>';
-    FB.reqs.slice().sort(function (a, b) { return ML.str(a.email).localeCompare(ML.str(b.email)); }).forEach(function (r) {
-      var li = document.createElement("li");
-      li.innerHTML = '<div class="who"><b>' + esc(r.email) + '</b><div class="muted small-text">요청 ' + esc(fmtTs(r.requestedAt)) + '</div></div>' +
-        '<button type="button" class="small primary" data-ok>승인</button><button type="button" class="small danger" data-no>거절</button>';
-      li.querySelector("[data-ok]").addEventListener("click", function () {
-        FB.approve(r.email).then(function () { toast("승인했습니다: " + r.email); }, function (e) { toast("승인 실패(" + (e && e.code) + ")"); });
-      });
-      li.querySelector("[data-no]").addEventListener("click", function () {
-        confirmDialog("승인 요청 거절", r.email + " 의 요청을 거절할까요?\n(이 사람은 다시 요청할 수 있습니다)", [{ label: "취소", value: null }, { label: "거절", value: "ok", cls: "danger" }]).then(function (v) {
-          if (v === "ok") FB.fs.collection("requests").doc(r.email).delete().then(function () { toast("거절했습니다."); }, function (e) { toast("실패(" + (e && e.code) + ")"); });
-        });
-      });
-      rl.appendChild(li);
-    });
-    ml.innerHTML = FB.members.length ? "" : '<li class="empty-row">아직 승인된 직원이 없습니다.</li>';
-    FB.members.slice().sort(function (a, b) { return ML.str(a.email).localeCompare(ML.str(b.email)); }).forEach(function (m) {
-      var li = document.createElement("li");
-      li.innerHTML = '<div class="who"><b>' + esc(m.email) + '</b><div class="muted small-text">승인 ' + esc(fmtTs(m.approvedAt)) + (m.approvedBy ? " · " + esc(m.approvedBy) : "") + '</div></div>' +
-        '<button type="button" class="small danger">권한 해제</button>';
-      li.querySelector("button").addEventListener("click", function () {
-        confirmDialog("권한 해제", m.email + " 의 접근 권한을 해제할까요?\n해제하면 그 직원 화면에서 데이터가 바로 사라집니다.", [{ label: "취소", value: null }, { label: "해제", value: "ok", cls: "danger" }]).then(function (v) {
-          if (v === "ok") FB.fs.collection("members").doc(m.email).delete().then(function () { toast("권한을 해제했습니다."); }, function (e) { toast("실패(" + (e && e.code) + ")"); });
-        });
-      });
-      ml.appendChild(li);
-    });
-    $("adminNote").textContent = "관리자 계정: " + FB.adminEmail() + " (Firestore 보안 규칙에 고정되어 있어 이 화면에서는 바꿀 수 없습니다)";
-  }
-  $("btnAddMember").addEventListener("click", function () {
-    var v = $("addMemberEmail").value.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { toast("이메일 형식을 확인하세요."); return; }
-    FB.approve(v).then(function () { $("addMemberEmail").value = ""; toast("추가했습니다: " + v + " (그 이메일로 가입·인증하면 바로 들어올 수 있습니다)"); }, function (e) { toast("추가 실패(" + (e && e.code) + ")"); });
+  $("gateForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (Gate.state !== "code") return;
+    FB.who = $("gWho").value.trim(); if (FB.who) lsSet(FB.KEY_WHO, FB.who); else lsDel(FB.KEY_WHO);
+    FB.tryCode($("gCode").value, false);
   });
+  $("gShow").addEventListener("change", function (e) { $("gCode").type = e.target.checked ? "text" : "password"; });
+  $("btnLogout").addEventListener("click", function () {
+    confirmDialog("이 기기에서 나가기", "이 기기에 저장된 기관 코드를 지웁니다. 다시 들어오려면 코드를 입력해야 합니다.", [{ label: "취소", value: null }, { label: "나가기", value: "ok", cls: "danger" }])
+      .then(function (v) { if (v === "ok") FB.exit(); });
+  });
+  function renderUser() {
+    var on = Store.mode === "firebase" && FB.entered;
+    $("userBox").hidden = !on; $("userEmail").textContent = on ? "작성자: " + (FB.who || "이름 미입력") : "";
+  }
 
   // ================= 전체 렌더 =================
   function renderAll() {
