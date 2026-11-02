@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>수요처 활동 지도 v2.7</title>
+<title>수요처 활동 지도 v2.8</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
 /* 레이아웃: 상단 안내띠(sticky) → 헤더 → 탭 3개 → 패널. 지도 패널은 왼쪽 범례·검색 / 오른쪽 지도, 좁은 화면에서는 세로로 쌓임. */
@@ -87,6 +87,13 @@ label { font-weight: 500; }
 .legend input[type=checkbox] { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
 .legend .cnt { margin-left: auto; color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
 .legend svg { flex: none; }
+.gu-head { border-top: 1px solid var(--border); padding-top: 10px; }
+#guList li { display: flex; align-items: center; gap: 4px; }
+#guList li label { flex: 1; }
+#guList .gu-go { font-size: .85rem; padding: 0 6px; }
+.gu-line { display: flex; align-items: center; gap: 8px; font-size: .92rem; cursor: pointer; }
+.gu-line input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.gu-label { width: 60px; text-align: center; font-weight: 700; font-size: 13px; color: #2B3440; text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff; pointer-events: none; white-space: nowrap; }
 .legend-note { font-size: .9rem; color: var(--muted); border-top: 1px solid var(--border); padding-top: 10px; }
 .search { position: relative; }
 .search label { display: block; margin-bottom: 6px; }
@@ -204,7 +211,7 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
 
 <header class="app-header">
   <div>
-    <h1>노인공익활동 수요처 지도 <span class="ver">v2.7</span></h1>
+    <h1>노인공익활동 수요처 지도 <span class="ver">v2.8</span></h1>
     <p class="sub">2027년 노인공익활동 사업 10개 · 수요처(■)·수요자(◆) / 9988행복지키미 참여자(●)·수요자(▲) · 활동점검 기록</p>
   </div>
   <div class="status" id="storageStatus"><span class="pill">저장 위치 확인 중…</span></div>
@@ -256,6 +263,12 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
           <li><label><input type="checkbox" id="chk9988P" checked><span id="icon9988P"></span>9988 참여자 (●)<span class="cnt" id="cnt9988P"></span></label></li>
           <li><label><input type="checkbox" id="chk9988R" checked><span id="icon9988R"></span>9988 수요자 (▲)<span class="cnt" id="cnt9988R"></span></label></li>
         </ul>
+        <div class="legend-head gu-head">
+          <h2>청주시 구별 보기</h2>
+          <div><button type="button" class="link" id="btnGuAll">전체 구</button></div>
+        </div>
+        <ul id="guList" class="legend" aria-label="청주시 구별 표시"></ul>
+        <label class="gu-line"><input type="checkbox" id="chkGuLine" checked> 구 경계선·이름 표시</label>
         <p class="legend-note">■ 수요처 · ◆ 수요자(사업별 색) · ● 9988 참여자 · ▲ 9988 수요자. 표시에 마우스를 올리면 등록 내용(활동시간 등), 누르면 최근 활동점검일까지 확인합니다.</p>
         <div class="map-summary" id="mapSummary"></div>
       </aside>
@@ -292,6 +305,7 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
         <h2>수요처 목록 <span class="muted" id="siteCount"></span></h2>
         <div class="tools">
           <input type="search" id="siteFilterText" placeholder="이름·주소·담당자·활동시간 검색" aria-label="수요처 목록 검색" autocomplete="off">
+          <select id="siteFilterGu" aria-label="구 선택"><option value="">모든 구</option></select>
           <select id="siteFilterProg" aria-label="사업 선택"><option value="">모든 사업</option></select>
           <button type="button" class="primary needs-write" id="btnAddSite">수요자(처) 추가</button>
         </div>
@@ -934,6 +948,33 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     return la != null && lo != null && !isNaN(la) && !isNaN(lo);
   }
 
+  // ---------- 청주시 구 ----------
+  // 경계: 행정동 경계(vuski/admdongkor ver20261001)를 구별로 합쳐 단순화한 것. rings 좌표는 [경도, 위도]
+  var GU = {"상당구":{"rings":[[[127.44596,36.51228],[127.45205,36.51495],[127.45333,36.51988],[127.45193,36.52362],[127.45444,36.52335],[127.4556,36.52552],[127.45474,36.53317],[127.45295,36.53536],[127.45354,36.53742],[127.45167,36.5412],[127.44757,36.54142],[127.44739,36.5477],[127.45259,36.54743],[127.45705,36.54898],[127.46933,36.54337],[127.47963,36.54763],[127.48507,36.54491],[127.48579,36.54775],[127.48407,36.55175],[127.47947,36.55681],[127.48146,36.56133],[127.47505,36.56266],[127.47213,36.56086],[127.46718,36.562],[127.46798,36.57115],[127.47407,36.58105],[127.48238,36.58276],[127.48848,36.58134],[127.49995,36.58769],[127.49774,36.5926],[127.49765,36.6104],[127.49462,36.61586],[127.4933,36.62237],[127.48194,36.63065],[127.48384,36.63648],[127.48253,36.64466],[127.48819,36.64504],[127.49737,36.64809],[127.50095,36.64723],[127.50966,36.65323],[127.51319,36.65299],[127.51913,36.65532],[127.52428,36.65802],[127.52498,36.66037],[127.52776,36.66246],[127.53343,36.66446],[127.53269,36.66587],[127.53593,36.66884],[127.54359,36.66901],[127.54921,36.67439],[127.5517,36.67277],[127.5555,36.67401],[127.56723,36.67442],[127.57944,36.68438],[127.5856,36.68388],[127.58909,36.68767],[127.59191,36.6885],[127.59205,36.69087],[127.59764,36.69778],[127.60052,36.6989],[127.60539,36.6982],[127.61235,36.70016],[127.61468,36.70511],[127.61724,36.70748],[127.6228,36.70493],[127.62693,36.70749],[127.63513,36.70868],[127.64135,36.70549],[127.64253,36.70263],[127.64785,36.70124],[127.65075,36.70202],[127.65531,36.70476],[127.6616,36.71435],[127.66176,36.72257],[127.66492,36.72978],[127.67227,36.7221],[127.67871,36.7189],[127.68631,36.72076],[127.68904,36.71547],[127.69218,36.71247],[127.70219,36.70982],[127.70265,36.70347],[127.70571,36.70052],[127.70873,36.70007],[127.71375,36.69524],[127.71352,36.69014],[127.71896,36.68756],[127.72342,36.68316],[127.72894,36.68262],[127.72424,36.67418],[127.71289,36.66805],[127.71184,36.66501],[127.71422,36.66108],[127.71178,36.66064],[127.71197,36.65764],[127.70908,36.65436],[127.71315,36.65068],[127.71968,36.65224],[127.72363,36.6514],[127.72483,36.64564],[127.72987,36.64355],[127.73423,36.63944],[127.73877,36.6395],[127.74193,36.62869],[127.74892,36.62647],[127.75043,36.62159],[127.76406,36.61321],[127.7698,36.60412],[127.76892,36.60323],[127.76903,36.59344],[127.76358,36.59112],[127.75524,36.59018],[127.74678,36.58554],[127.74276,36.58809],[127.74136,36.59136],[127.73714,36.59265],[127.73571,36.59545],[127.73745,36.59686],[127.73698,36.59978],[127.72879,36.60226],[127.72713,36.60088],[127.72032,36.60269],[127.71394,36.60188],[127.70942,36.59612],[127.70516,36.59518],[127.70172,36.5909],[127.69457,36.58856],[127.68726,36.59194],[127.68135,36.59188],[127.67931,36.5958],[127.6701,36.59794],[127.66577,36.60044],[127.66491,36.60252],[127.66038,36.6028],[127.65914,36.60143],[127.65365,36.60047],[127.65199,36.60483],[127.64623,36.60654],[127.64356,36.60526],[127.6412,36.60192],[127.63556,36.59996],[127.63082,36.59342],[127.63247,36.58964],[127.63058,36.58672],[127.62247,36.58155],[127.62161,36.57872],[127.61773,36.57776],[127.61145,36.57012],[127.61143,36.56675],[127.61662,36.55934],[127.6141,36.55675],[127.61207,36.55138],[127.60321,36.54789],[127.59881,36.54819],[127.59089,36.54337],[127.58775,36.5439],[127.58102,36.54211],[127.57974,36.53796],[127.5709,36.53569],[127.56526,36.53051],[127.56902,36.52142],[127.57301,36.5164],[127.57335,36.50958],[127.57039,36.50371],[127.57011,36.49965],[127.57207,36.49421],[127.57645,36.49044],[127.56701,36.4841],[127.55833,36.47236],[127.55634,36.47174],[127.55706,36.46963],[127.55386,36.46307],[127.55333,36.45774],[127.5455,36.44943],[127.54587,36.44694],[127.5229,36.43887],[127.51995,36.4364],[127.51652,36.42848],[127.51004,36.40312],[127.50903,36.40521],[127.50256,36.4082],[127.4977,36.41897],[127.48921,36.4327],[127.49223,36.44045],[127.50263,36.44928],[127.50266,36.45398],[127.49894,36.45568],[127.48717,36.45467],[127.47934,36.45784],[127.48451,36.47526],[127.48343,36.47953],[127.47712,36.48132],[127.47588,36.49083],[127.4677,36.49098],[127.46647,36.49274],[127.45887,36.49513],[127.45465,36.5007],[127.44989,36.5006],[127.4492,36.50549],[127.44596,36.51228]]],"label":[36.5647,127.54014],"bbox":[127.446,36.4031,127.7698,36.7298]},"서원구":{"rings":[[[127.37257,36.56011],[127.37636,36.56079],[127.37755,36.56933],[127.38659,36.57734],[127.38984,36.58532],[127.39823,36.5907],[127.40101,36.59603],[127.40627,36.59834],[127.41153,36.6046],[127.41985,36.59803],[127.42327,36.60008],[127.43411,36.59941],[127.43331,36.60284],[127.43424,36.60593],[127.43663,36.60728],[127.43683,36.61064],[127.44433,36.61596],[127.44435,36.62155],[127.44321,36.6235],[127.44977,36.62631],[127.4502,36.62996],[127.45629,36.63459],[127.45665,36.63799],[127.46171,36.63937],[127.46669,36.63779],[127.46695,36.63986],[127.46892,36.64005],[127.46886,36.64285],[127.47338,36.6428],[127.48145,36.64658],[127.48361,36.64103],[127.48384,36.63648],[127.48195,36.63064],[127.49331,36.62238],[127.49461,36.6159],[127.49765,36.61042],[127.49775,36.5926],[127.5002,36.58745],[127.48846,36.58132],[127.4824,36.58275],[127.4741,36.58094],[127.47064,36.57694],[127.46799,36.57117],[127.4673,36.56195],[127.47206,36.56088],[127.47497,36.56267],[127.48158,36.56122],[127.47947,36.55682],[127.48405,36.55179],[127.4858,36.54774],[127.48508,36.54488],[127.47964,36.54761],[127.46929,36.54337],[127.45708,36.54898],[127.45264,36.54743],[127.44923,36.54835],[127.44739,36.54757],[127.44753,36.54156],[127.45169,36.54125],[127.45363,36.53722],[127.45296,36.53539],[127.45475,36.53322],[127.45558,36.52607],[127.45446,36.52328],[127.45201,36.52349],[127.45333,36.51986],[127.45206,36.51496],[127.44602,36.5121],[127.44921,36.50548],[127.44987,36.50075],[127.45465,36.5007],[127.45881,36.49518],[127.46652,36.49272],[127.46777,36.49097],[127.47586,36.49087],[127.47711,36.48141],[127.48348,36.47954],[127.48342,36.4778],[127.47175,36.47468],[127.46772,36.47124],[127.46471,36.46606],[127.46423,36.4574],[127.46272,36.45529],[127.45509,36.45076],[127.44862,36.44963],[127.44264,36.45074],[127.43631,36.45661],[127.43317,36.45724],[127.42655,36.45694],[127.42665,36.45534],[127.42465,36.45516],[127.42435,36.45632],[127.41272,36.45477],[127.40262,36.4557],[127.40044,36.46131],[127.4006,36.47016],[127.40346,36.47615],[127.4042,36.48329],[127.39567,36.49161],[127.40877,36.49539],[127.40925,36.4988],[127.40784,36.50007],[127.40777,36.50285],[127.40915,36.50712],[127.40885,36.50954],[127.40596,36.51179],[127.40387,36.51708],[127.39755,36.52105],[127.40231,36.52354],[127.40856,36.52432],[127.40831,36.5273],[127.40562,36.5314],[127.40502,36.53728],[127.40159,36.54143],[127.39217,36.53995],[127.38349,36.54201],[127.38309,36.54815],[127.37869,36.54992],[127.37936,36.5537],[127.37579,36.55725],[127.37356,36.55781],[127.37257,36.56011]]],"label":[36.54795,127.4157],"bbox":[127.3726,36.4496,127.5002,36.6466]},"흥덕구":{"rings":[[[127.27671,36.63852],[127.27728,36.64157],[127.28042,36.64163],[127.28696,36.65417],[127.29336,36.65447],[127.30152,36.65995],[127.30145,36.66409],[127.30499,36.66733],[127.30748,36.67803],[127.30758,36.68176],[127.30458,36.68488],[127.29191,36.68699],[127.28563,36.69093],[127.2919,36.69724],[127.29673,36.69783],[127.30801,36.70485],[127.30677,36.70804],[127.30845,36.72131],[127.31105,36.72369],[127.31697,36.72482],[127.32601,36.72316],[127.33436,36.72],[127.33852,36.71992],[127.34095,36.71841],[127.35094,36.71902],[127.35473,36.71745],[127.36164,36.71789],[127.37548,36.71232],[127.38698,36.71748],[127.39401,36.71742],[127.39972,36.7139],[127.40027,36.71092],[127.4063,36.70866],[127.41049,36.71052],[127.41083,36.70889],[127.40863,36.70561],[127.42086,36.6963],[127.42103,36.69277],[127.42541,36.69287],[127.42564,36.6893],[127.42793,36.68922],[127.42837,36.68308],[127.43371,36.68137],[127.444,36.68312],[127.44664,36.68529],[127.44858,36.6829],[127.44709,36.68163],[127.4477,36.67531],[127.45627,36.67476],[127.46222,36.67024],[127.48145,36.64658],[127.47338,36.6428],[127.46902,36.64279],[127.46894,36.63986],[127.46703,36.63978],[127.4669,36.63778],[127.46167,36.63935],[127.45672,36.63797],[127.45634,36.63464],[127.45021,36.62998],[127.44984,36.62633],[127.44337,36.62355],[127.44434,36.61594],[127.43683,36.61062],[127.43662,36.60727],[127.43424,36.60589],[127.43333,36.60291],[127.43411,36.59938],[127.42328,36.60008],[127.41992,36.59795],[127.41145,36.60452],[127.40627,36.59834],[127.40099,36.59602],[127.39824,36.59072],[127.38976,36.58523],[127.38658,36.57733],[127.37759,36.56936],[127.37706,36.56745],[127.37032,36.56651],[127.35853,36.5621],[127.35114,36.56225],[127.3476,36.56422],[127.34321,36.56454],[127.33738,36.56273],[127.33547,36.56772],[127.3362,36.57037],[127.32621,36.5771],[127.32492,36.58071],[127.32222,36.58261],[127.31906,36.5819],[127.30824,36.58346],[127.30671,36.58516],[127.30377,36.58569],[127.30106,36.5822],[127.29935,36.5864],[127.30393,36.59008],[127.30714,36.60148],[127.30123,36.60752],[127.30085,36.61555],[127.29458,36.62071],[127.29128,36.62554],[127.29238,36.63568],[127.28891,36.63714],[127.28502,36.63466],[127.28085,36.63439],[127.27671,36.63852]]],"label":[36.64469,127.37971],"bbox":[127.2767,36.5621,127.4814,36.7248]},"청원구":{"rings":[[[127.31697,36.72482],[127.32546,36.73367],[127.3283,36.73455],[127.33683,36.7294],[127.33927,36.73022],[127.34125,36.73734],[127.33843,36.73748],[127.33722,36.74443],[127.33405,36.74698],[127.33359,36.74849],[127.33555,36.75236],[127.34539,36.75384],[127.34896,36.75594],[127.35316,36.75597],[127.35883,36.76068],[127.36944,36.76148],[127.37234,36.75824],[127.38723,36.75947],[127.38892,36.75323],[127.39271,36.75262],[127.39688,36.74691],[127.40446,36.74499],[127.40565,36.75006],[127.4112,36.75331],[127.41208,36.7573],[127.41529,36.75656],[127.42456,36.75781],[127.42735,36.75686],[127.42518,36.75468],[127.42723,36.75074],[127.43944,36.75317],[127.44138,36.75234],[127.44247,36.74949],[127.4463,36.74825],[127.44981,36.74961],[127.45005,36.75871],[127.45138,36.76102],[127.45857,36.76607],[127.46034,36.76977],[127.47295,36.76938],[127.4811,36.774],[127.48081,36.77529],[127.48222,36.77604],[127.49076,36.7735],[127.49485,36.77758],[127.5005,36.77943],[127.50633,36.77825],[127.51061,36.77389],[127.50895,36.7695],[127.50326,36.76653],[127.50192,36.76398],[127.5113,36.76798],[127.53011,36.77008],[127.53203,36.77175],[127.54119,36.77414],[127.54431,36.77367],[127.55442,36.77784],[127.56422,36.77962],[127.56632,36.77788],[127.5687,36.77179],[127.57534,36.76725],[127.58873,36.76241],[127.58843,36.75708],[127.59126,36.74756],[127.59613,36.74458],[127.60343,36.74585],[127.60581,36.74378],[127.60845,36.73661],[127.6099,36.73555],[127.61109,36.72777],[127.61383,36.72627],[127.61543,36.71874],[127.61866,36.71641],[127.61875,36.71363],[127.61776,36.70745],[127.61473,36.70515],[127.61233,36.70011],[127.60547,36.6982],[127.60047,36.69888],[127.59767,36.69779],[127.59214,36.69098],[127.59198,36.68856],[127.58902,36.68762],[127.58563,36.68375],[127.58238,36.68493],[127.57943,36.68437],[127.56727,36.67443],[127.55552,36.67401],[127.5517,36.67276],[127.54917,36.67425],[127.54361,36.66901],[127.53591,36.66883],[127.53282,36.66601],[127.53369,36.66463],[127.52771,36.66242],[127.52369,36.65767],[127.51429,36.65325],[127.50959,36.65319],[127.50091,36.64719],[127.49736,36.64809],[127.48819,36.64503],[127.48253,36.64466],[127.46221,36.67024],[127.45628,36.67475],[127.44765,36.67536],[127.44709,36.68168],[127.44841,36.68304],[127.4468,36.68508],[127.44404,36.68313],[127.43377,36.68137],[127.42828,36.68304],[127.42793,36.68901],[127.42559,36.68917],[127.42535,36.69279],[127.42106,36.69271],[127.42075,36.69638],[127.40862,36.70561],[127.4108,36.7089],[127.4104,36.71045],[127.40628,36.70865],[127.40008,36.71099],[127.39968,36.71393],[127.39398,36.71742],[127.38698,36.71748],[127.37545,36.71232],[127.36163,36.71787],[127.35474,36.71745],[127.35094,36.71901],[127.34097,36.71841],[127.33849,36.71993],[127.33439,36.71999],[127.32599,36.72316],[127.31697,36.72482]]],"label":[36.71166,127.50921],"bbox":[127.317,36.6447,127.6188,36.7796]}};
+  var GU_NAMES = ["상당구", "서원구", "흥덕구", "청원구"];
+  function inRing(lng, lat, ring) {
+    var inside = false;
+    for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      var xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+      if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) inside = !inside;
+    }
+    return inside;
+  }
+  // 좌표가 있으면 경계로, 없으면 주소 글자(상당구 등)로 구를 정함. 모르면 ""
+  function guOf(r) {
+    if (r && hasCoords(r)) {
+      var la = toNumber(r["위도"]), lo = toNumber(r["경도"]);
+      for (var k = 0; k < GU_NAMES.length; k++) {
+        var g = GU[GU_NAMES[k]]; if (!g) continue;
+        var b = g.bbox; if (lo < b[0] || lo > b[2] || la < b[1] || la > b[3]) continue;
+        for (var q = 0; q < g.rings.length; q++) if (inRing(lo, la, g.rings[q])) return GU_NAMES[k];
+      }
+    }
+    var a = str(r && r["주소"]).replace(/\s+/g, "");
+    for (var n = 0; n < GU_NAMES.length; n++) if (a.indexOf(GU_NAMES[n]) >= 0) return GU_NAMES[n];
+    return "";
+  }
+
   return {
     PROGRAMS: PROGRAMS, COLUMNS: COLUMNS, REQUIRED: REQUIRED, INPUT_COLUMNS: INPUT_COLUMNS, UPLOAD_REQ: UPLOAD_REQ, ALIASES: ALIASES, SHEETS: SHEETS, ID_KEY: ID_KEY,
     PROGRAM_9988: PROGRAM_9988, KINDS: KINDS, METHODS: METHODS, KOREA: KOREA, CHEONGJU: CHEONGJU,
@@ -943,7 +984,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     docId: docId, normalizeRow: normalizeRow, checkHeaders: checkHeaders,
     count9988: count9988, siteCounts: siteCounts, latestInspectionDate: latestInspectionDate, nextInspectionId: nextInspectionId,
     mergeById: mergeById, applyPlan: applyPlan, validateWorkbook: validateWorkbook, validateSingle: validateSingle,
-    parseWorkbook: parseWorkbook, toAoA: toAoA, inputAoA: inputAoA, exportColumns: exportColumns, nextId: nextId, canon: canon, dataBounds: dataBounds, hasCoords: hasCoords
+    parseWorkbook: parseWorkbook, toAoA: toAoA, inputAoA: inputAoA, exportColumns: exportColumns, nextId: nextId, canon: canon, dataBounds: dataBounds, hasCoords: hasCoords, GU: GU, GU_NAMES: GU_NAMES, guOf: guOf
   };
 });
 
@@ -960,7 +1001,10 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
 
   // ================= 상태 =================
   var state = { sites: [], persons: [], inspections: [], loaded: false,
-    filters: { programs: {}, p9988: true, r9988: true }, search: "" };
+    filters: { programs: {}, p9988: true, r9988: true, gu: {}, guLine: true }, search: "" };
+  ML.GU_NAMES.forEach(function (g) { state.filters.gu[g] = true; });
+  // 구 필터: 구를 모르는 곳(청주 밖·주소 미확인)은 항상 표시
+  function guShown(r) { var g = ML.guOf(r); return !g || state.filters.gu[g] !== false; }
   ML.PROGRAMS.forEach(function (p) { state.filters.programs[p.name] = true; });
   var pick = null;        // {kind:'site'|'person', values:{}, originalId}
   var pendingUpload = null; // {parsed, fileName}
@@ -1158,6 +1202,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
       if (pick) { onMapClick({ latlng: { lat: e.coord.lat(), lng: e.coord.lng() } }); return; }
       closeInfo();
     });
+    drawGu();
     resizeMap(true);
     var rt = null;
     window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(function () { resizeMap(); }, 150); });
@@ -1170,7 +1215,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     var c = ML.siteCounts(s, state.persons), row = function (k, v) { return v === "" || v == null ? "" : '<dt>' + k + '</dt><dd>' + esc(v) + '</dd>'; };
     return '<div class="hpop"><div class="pop-prog"><span class="dot" style="background:' + ML.programColor(s["사업명"]) + '"></span>' + esc(s["사업명"]) + ' · ' + (ML.siteType(s) === "수요자" ? "◆ 수요자" : "■ 수요처") + '</div>' +
       '<b class="hpop-name">' + esc(s["수요처명"]) + '</b><dl>' +
-      row("주소", ML.str(s["주소"])) + row("참여자", c.participants + "명") + row("수요자", c.recipients + (ML.siteType(s) === "수요자" ? "명" : "명(곳)")) +
+      row("구", ML.guOf(s)) + row("주소", ML.str(s["주소"])) + row("참여자", c.participants + "명") + row("수요자", c.recipients + (ML.siteType(s) === "수요자" ? "명" : "명(곳)")) +
       row("활동시간", ML.str(s["활동시간"]) || "미등록") + row("담당자", ML.str(s["담당자"])) + row("비고", ML.str(s["비고"])) + '</dl></div>';
   }
   function showHover(marker, html) {
@@ -1213,7 +1258,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     return '<div class="pop">' +
       '<div class="pop-prog"><span class="dot" style="background:' + ML.programColor(s["사업명"]) + '"></span>' + esc(s["사업명"]) + '</div>' +
       '<h3 class="pop-name">' + esc(s["수요처명"]) + '</h3>' +
-      '<dl><dt>유형</dt><dd>' + (ML.siteType(s) === "수요자" ? "◆ 수요자" : "■ 수요처") + '</dd><dt>주소</dt><dd>' + esc(s["주소"]) + '</dd>' +
+      '<dl><dt>유형</dt><dd>' + (ML.siteType(s) === "수요자" ? "◆ 수요자" : "■ 수요처") + '</dd>' + (ML.guOf(s) ? '<dt>구</dt><dd>' + ML.guOf(s) + '</dd>' : "") + '<dt>주소</dt><dd>' + esc(s["주소"]) + '</dd>' +
       '<dt>참여자</dt><dd>' + pTxt + '</dd><dt>수요자</dt><dd>' + rTxt + '</dd>' +
       (s["활동시간"] ? '<dt>활동시간</dt><dd>' + esc(s["활동시간"]) + '</dd>' : "") +
       '<dt>최근 활동점검</dt><dd>' + (last ? esc(last) : '<span class="muted">점검 기록 없음</span>') + '</dd>' +
@@ -1236,7 +1281,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     closeInfo(); markers.forEach(function (m) { m.setMap(null); }); markers = []; markerIndex = { site: {}, person: {} };
     var shown = { sites: 0, siteR: 0, p: 0, r: 0 };
     state.sites.forEach(function (s) {
-      if (!state.filters.programs[s["사업명"]] || !ML.hasCoords(s)) return;
+      if (!state.filters.programs[s["사업명"]] || !ML.hasCoords(s) || !guShown(s)) return;
       var m = new naver.maps.Marker({ map: map, position: ll(ML.toNumber(s["위도"]), ML.toNumber(s["경도"])), icon: makeIcon(ML.siteType(s) === "수요자" ? "diamond" : "square", ML.programColor(s["사업명"])), title: s["수요처명"], zIndex: 200 });
       naver.maps.Event.addListener(m, "click", function () { if (!pick) { hideHover(); openInfo(m, sitePopupHtml(siteById(s["수요처ID"]) || s)); } });
       naver.maps.Event.addListener(m, "mouseover", function () { if (!pick) showHover(m, siteHoverHtml(siteById(s["수요처ID"]) || s)); });
@@ -1245,7 +1290,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     });
     state.persons.forEach(function (p) {
       var isP = p["구분"] === "참여자";
-      if ((isP && !state.filters.p9988) || (!isP && !state.filters.r9988) || !ML.hasCoords(p)) return;
+      if ((isP && !state.filters.p9988) || (!isP && !state.filters.r9988) || !ML.hasCoords(p) || !guShown(p)) return;
       var m = new naver.maps.Marker({ map: map, position: ll(ML.toNumber(p["위도"]), ML.toNumber(p["경도"])), icon: makeIcon(isP ? "circle" : "triangle", ML.programColor(ML.PROGRAM_9988)), title: p["표시명"], zIndex: 100 });
       naver.maps.Event.addListener(m, "click", function () { if (!pick) openInfo(m, personPopupHtml(personById(p["개인ID"]) || p)); });
       markers.push(m); markerIndex.person[ML.str(p["개인ID"])] = m; if (isP) shown.p++; else shown.r++;
@@ -1277,7 +1322,54 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     $("cnt9988P").textContent = state.persons.filter(function (p) { return p["구분"] === "참여자"; }).length + "명";
     $("cnt9988R").textContent = state.persons.filter(function (p) { return p["구분"] === "수요자"; }).length + "명";
     $("chk9988P").checked = state.filters.p9988; $("chk9988R").checked = state.filters.r9988;
+    renderGuList();
   }
+  // ---- 청주시 구 ----
+  var guShapes = {}; // 구 이름 → { poly, label }
+  function drawGu() {
+    if (!map || !naver.maps.Polygon) return;
+    ML.GU_NAMES.forEach(function (g) {
+      var d = ML.GU[g]; if (!d) return;
+      var poly = new naver.maps.Polygon({ map: map, paths: d.rings.map(function (r) { return r.map(function (c) { return ll(c[1], c[0]); }); }),
+        strokeColor: "#3B4654", strokeOpacity: 0.85, strokeWeight: 2, strokeStyle: "shortdash", fillColor: "#3B4654", fillOpacity: 0, clickable: false, zIndex: 1 });
+      var label = new naver.maps.Marker({ map: map, position: ll(d.label[0], d.label[1]), clickable: false, zIndex: 50,
+        icon: { content: '<div class="gu-label">' + esc(g) + '</div>', anchor: new naver.maps.Point(30, 12) } });
+      guShapes[g] = { poly: poly, label: label };
+    });
+    styleGu();
+  }
+  function styleGu() {
+    ML.GU_NAMES.forEach(function (g) {
+      var s = guShapes[g]; if (!s) return;
+      var on = state.filters.guLine, sel = state.filters.gu[g] !== false;
+      s.poly.setMap(on ? map : null); s.label.setMap(on ? map : null);
+      // 고르지 않은 구는 회색으로 흐리게
+      s.poly.setOptions({ fillOpacity: sel ? 0 : 0.22 });
+    });
+  }
+  function guCount(g) {
+    return state.sites.filter(function (s) { return ML.guOf(s) === g; }).length;
+  }
+  function renderGuList() {
+    var ul = $("guList"); ul.innerHTML = "";
+    ML.GU_NAMES.forEach(function (g) {
+      var li = document.createElement("li");
+      li.innerHTML = '<label><input type="checkbox"' + (state.filters.gu[g] !== false ? " checked" : "") + '><span>' + esc(g) + '</span><span class="cnt">' + guCount(g) + '곳</span></label>' +
+        '<button type="button" class="link gu-go" title="' + esc(g) + '로 이동">이동</button>';
+      li.querySelector("input").addEventListener("change", function (e) { state.filters.gu[g] = e.target.checked; styleGu(); renderMarkers(); });
+      li.querySelector(".gu-go").addEventListener("click", function () { zoomGu(g); });
+      ul.appendChild(li);
+    });
+    var unk = state.sites.filter(function (s) { return !ML.guOf(s); }).length;
+    if (unk) { var li = document.createElement("li"); li.className = "muted small-text gu-unk"; li.textContent = "구 미확인(청주 밖·좌표 없음) " + unk + "곳 — 항상 표시"; ul.appendChild(li); }
+    $("chkGuLine").checked = state.filters.guLine;
+  }
+  function zoomGu(g) {
+    var d = ML.GU[g]; if (!map || !d) return;
+    map.fitBounds(new naver.maps.LatLngBounds(ll(d.bbox[1], d.bbox[0]), ll(d.bbox[3], d.bbox[2])), { top: 20, right: 20, bottom: 20, left: 20 });
+  }
+  $("chkGuLine").addEventListener("change", function (e) { state.filters.guLine = e.target.checked; styleGu(); });
+  $("btnGuAll").addEventListener("click", function () { ML.GU_NAMES.forEach(function (g) { state.filters.gu[g] = true; }); renderGuList(); styleGu(); renderMarkers(); });
   $("chk9988P").addEventListener("change", function (e) { state.filters.p9988 = e.target.checked; renderMarkers(); });
   $("chk9988R").addEventListener("change", function (e) { state.filters.r9988 = e.target.checked; renderMarkers(); });
   $("btnAllOn").addEventListener("click", function () { ML.PROGRAMS.forEach(function (p) { state.filters.programs[p.name] = true; }); state.filters.p9988 = state.filters.r9988 = true; renderLegend(); renderMarkers(); });
@@ -1303,7 +1395,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     var s = siteById(id); if (!s) return;
     switchTab("map");
     if (!ML.hasCoords(s)) { toast("'" + s["수요처명"] + "'은(는) 좌표가 없어 지도에 표시되지 않습니다. [데이터 관리] → 좌표 미지정에서 위치를 지정하세요."); return; }
-    if (!state.filters.programs[s["사업명"]]) { state.filters.programs[s["사업명"]] = true; renderLegend(); renderMarkers(); }
+    if (!state.filters.programs[s["사업명"]] || !guShown(s)) { state.filters.programs[s["사업명"]] = true; var gg = ML.guOf(s); if (gg) state.filters.gu[gg] = true; renderLegend(); styleGu(); renderMarkers(); }
     if (!map) { toast("네이버 지도가 연결되지 않았습니다."); return; }
     setTimeout(function () {
       resizeMap();
@@ -1389,24 +1481,26 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
   }
 
   function renderSiteTable() {
+    var gu = $("siteFilterGu").value;
     var prog = $("siteFilterProg").value, q = ML.str($("siteFilterText").value).replace(/\s+/g, "").toLowerCase();
     var rows = state.sites.filter(function (s) {
       if (prog && s["사업명"] !== prog) return false;
+      if (gu && ML.guOf(s) !== gu) return false;
       if (!q) return true;
-      var hay = ["수요처명", "주소", "담당자", "활동시간", "비고", "수요처ID", "사업명"].map(function (k) { return ML.str(s[k]); }).join("|") + "|" + ML.siteType(s);
+      var hay = ["수요처명", "주소", "담당자", "활동시간", "비고", "수요처ID", "사업명"].map(function (k) { return ML.str(s[k]); }).join("|") + "|" + ML.siteType(s) + "|" + ML.guOf(s);
       return hay.replace(/\s+/g, "").toLowerCase().indexOf(q) >= 0;
     })
       .sort(function (a, b) { return ML.str(a["사업명"]).localeCompare(ML.str(b["사업명"]), "ko") || ML.str(a["수요처ID"]).localeCompare(ML.str(b["수요처ID"])); });
-    $("siteCount").textContent = "(" + rows.length + (prog || q ? "/" + state.sites.length : "") + "곳)";
+    $("siteCount").textContent = "(" + rows.length + (prog || q || gu ? "/" + state.sites.length : "") + "곳)";
     var wrap = $("siteTableWrap");
     if (!state.sites.length) { wrap.innerHTML = emptyStateHtml("수요처"); return; }
-    var h = '<table><thead><tr><th>사업명</th><th>유형</th><th>수요자(처)명</th><th>ID</th><th>주소</th><th>참여자</th><th>수요자</th><th>활동시간</th><th>좌표</th><th>최근 점검</th><th>작업</th></tr></thead><tbody>';
-    if (!rows.length) h += '<tr><td colspan="11" class="muted" style="text-align:center;padding:18px">검색 결과가 없습니다.</td></tr>';
+    var h = '<table><thead><tr><th>사업명</th><th>유형</th><th>구</th><th>수요자(처)명</th><th>ID</th><th>주소</th><th>참여자</th><th>수요자</th><th>활동시간</th><th>좌표</th><th>최근 점검</th><th>작업</th></tr></thead><tbody>';
+    if (!rows.length) h += '<tr><td colspan="12" class="muted" style="text-align:center;padding:18px">검색 결과가 없습니다.</td></tr>';
     rows.forEach(function (s) {
       var c = ML.siteCounts(s, state.persons), last = ML.latestInspectionDate(s["수요처ID"], state.inspections);
       var pCell = c.auto && c.inputParticipants !== c.participants ? '<span class="mismatch" title="9988 집계 불일치">' + esc(c.inputParticipants) + '→' + c.participants + '</span>' : esc(c.participants);
       var rCell = c.auto && c.inputRecipients !== c.recipients ? '<span class="mismatch" title="9988 집계 불일치">' + esc(c.inputRecipients) + '→' + c.recipients + '</span>' : esc(c.recipients);
-      h += '<tr><td><span class="sq" style="background:' + ML.programColor(s["사업명"]) + '"></span> ' + esc(s["사업명"]) + '</td><td class="nw">' + ML.siteType(s) + '</td><td><b>' + esc(s["수요처명"]) + '</b></td><td>' + esc(s["수요처ID"]) + '</td><td>' + esc(s["주소"]) + '</td>' +
+      h += '<tr><td><span class="sq" style="background:' + ML.programColor(s["사업명"]) + '"></span> ' + esc(s["사업명"]) + '</td><td class="nw">' + ML.siteType(s) + '</td><td class="nw">' + (ML.guOf(s) || '<span class="muted">-</span>') + '</td><td><b>' + esc(s["수요처명"]) + '</b></td><td>' + esc(s["수요처ID"]) + '</td><td>' + esc(s["주소"]) + '</td>' +
         '<td class="num">' + pCell + '</td><td class="num">' + rCell + '</td><td>' + (s["활동시간"] ? esc(s["활동시간"]) : '<span class="muted">-</span>') + '</td><td>' + (ML.hasCoords(s) ? '<span class="badge ok">있음</span>' : '<span class="badge warn">미지정</span>') + '</td>' +
         '<td>' + (last ? esc(last) : '<span class="muted">없음</span>') + '</td>' +
         '<td class="actions"><button type="button" class="small" data-focus="' + esc(s["수요처ID"]) + '">지도</button><button type="button" class="small needs-write" data-edit-site="' + esc(s["수요처ID"]) + '">수정</button><button type="button" class="small danger needs-write" data-del-site="' + esc(s["수요처ID"]) + '">삭제</button></td></tr>';
@@ -1448,6 +1542,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
   }
   $("siteFilterProg").addEventListener("change", renderSiteTable);
   $("siteFilterText").addEventListener("input", renderSiteTable);
+  $("siteFilterGu").addEventListener("change", renderSiteTable);
   $("personFilterSite").addEventListener("change", renderPersonTable);
   $("siteTableWrap").addEventListener("click", function (e) {
     var b = e.target.closest("button"); if (!b) return;
@@ -1951,6 +2046,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
   // ================= 전체 렌더 =================
   function renderAll() {
     renderLegend(); renderMarkers();
+    fillSelect($("siteFilterGu"), [{ value: "", label: "모든 구" }].concat(ML.GU_NAMES.map(function (g) { return { value: g, label: g }; })), true);
     fillSelect($("siteFilterProg"), [{ value: "", label: "모든 사업" }].concat(ML.PROGRAMS.map(function (p) { return { value: p.name, label: p.name }; })), true);
     fillSelect($("personFilterSite"), siteOptions(true, "모든 마을", true), true);
     fillSelect($("inspFilterSite"), siteOptions(true, "모든 수요처", false), true);
