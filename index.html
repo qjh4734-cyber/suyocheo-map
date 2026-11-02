@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>수요처 활동 지도 v2.5</title>
+<title>수요처 활동 지도 v2.6</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
 /* 레이아웃: 상단 안내띠(sticky) → 헤더 → 탭 3개 → 패널. 지도 패널은 왼쪽 범례·검색 / 오른쪽 지도, 좁은 화면에서는 세로로 쌓임. */
@@ -113,6 +113,11 @@ body.gated .tabs, body.gated main, body.gated .notice { display: none !important
 .admin-list li .who { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
 .admin-list li.empty-row { color: var(--muted); border-style: dashed; }
 .npop { background: var(--surface); color: var(--fg); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.2); padding: 14px 16px; min-width: 240px; max-width: 320px; line-height: 1.5; position: relative; }
+.hpop { background: var(--surface); color: var(--fg); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.18); padding: 10px 12px; min-width: 200px; max-width: 280px; font-size: .9rem; line-height: 1.45; pointer-events: none; }
+.hpop .hpop-name { display: block; font-size: 1rem; margin: 2px 0 6px; }
+.hpop dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
+.hpop dt { color: var(--muted); }
+.hpop dd { margin: 0; }
 .npop .npop-close { position: absolute; right: 6px; top: 6px; min-height: 28px; padding: 0 8px; border: none; background: none; color: var(--muted); }
 .tile-notice { position: absolute; left: 12px; bottom: 28px; z-index: 800; max-width: min(92%, 520px); background: var(--warn-bg); color: var(--warn); border: 1px solid var(--border); border-radius: 10px; padding: 8px 40px 8px 12px; font-size: .88rem; line-height: 1.4; }
 .tile-notice .tn-close { position: absolute; right: 6px; top: 6px; min-height: 28px; padding: 0 8px; font-size: .9rem; line-height: 1; border-color: transparent; background: transparent; color: var(--warn); }
@@ -197,7 +202,7 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
 
 <header class="app-header">
   <div>
-    <h1>노인공익활동 수요처 지도 <span class="ver">v2.5</span></h1>
+    <h1>노인공익활동 수요처 지도 <span class="ver">v2.6</span></h1>
     <p class="sub">2027년 노인공익활동 사업 10개 · 수요처(■)·수요자(◆) / 9988행복지키미 참여자(●)·수요자(▲) · 활동점검 기록</p>
   </div>
   <div class="status" id="storageStatus"><span class="pill">저장 위치 확인 중…</span></div>
@@ -249,7 +254,7 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
           <li><label><input type="checkbox" id="chk9988P" checked><span id="icon9988P"></span>9988 참여자 (●)<span class="cnt" id="cnt9988P"></span></label></li>
           <li><label><input type="checkbox" id="chk9988R" checked><span id="icon9988R"></span>9988 수요자 (▲)<span class="cnt" id="cnt9988R"></span></label></li>
         </ul>
-        <p class="legend-note">■ 수요처 · ◆ 수요자(사업별 색) · ● 9988 참여자 · ▲ 9988 수요자. 표시를 눌러 주소·인원·최근 활동점검일을 확인합니다.</p>
+        <p class="legend-note">■ 수요처 · ◆ 수요자(사업별 색) · ● 9988 참여자 · ▲ 9988 수요자. 표시에 마우스를 올리면 등록 내용(활동시간 등), 누르면 최근 활동점검일까지 확인합니다.</p>
         <div class="map-summary" id="mapSummary"></div>
       </aside>
       <div class="map-wrap">
@@ -348,6 +353,7 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
       <div class="field"><label for="f_site_p" class="req">참여자 수(명)</label><input type="number" id="f_site_p" name="참여자수" min="0" step="1"></div>
       <div class="field"><label for="f_site_r" class="req">수요자(처) 수(명/곳)</label><input type="number" id="f_site_r" name="수요자수" min="0" step="1"></div>
     </div>
+    <div class="field"><label for="f_site_time">활동시간</label><input type="text" id="f_site_time" name="활동시간" placeholder="예: 월·수·금 09:00~12:00"></div>
     <p class="hint muted small-text" id="hint9988" hidden>9988행복지키미 마을의 인원은 개인 위치 데이터 건수로 자동 집계해 표시합니다. 여기 입력값과 다르면 차이를 함께 표시합니다.</p>
     <div class="field-row">
       <div class="field"><label for="f_site_staff">담당자</label><input type="text" id="f_site_staff" name="담당자"></div>
@@ -445,9 +451,9 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
   "use strict";
 
   var PROGRAMS = [{"name": "9988행복지키미", "color": "#E15759"}, {"name": "녹색마을만들기", "color": "#59A14F"}, {"name": "우리문화지킴이", "color": "#B07AA1"}, {"name": "행복나눔봉사", "color": "#F28E2B"}, {"name": "지방하천정화", "color": "#4E79A7"}, {"name": "청소년보호지원", "color": "#EDC948"}, {"name": "커피박찌꺼기새활용", "color": "#9C755F"}, {"name": "신나는체험마을", "color": "#FF9DA7"}, {"name": "행복세탁봉사", "color": "#76B7B2"}, {"name": "농작물 및 전통문화 체험", "color": "#A0A800"}];
-  var COLUMNS = {"수요처": ["수요처ID", "사업명", "유형", "수요처명", "주소", "위도", "경도", "참여자수", "수요자수", "담당자", "비고"], "9988개인": ["개인ID", "구분", "표시명", "소속수요처ID", "주소", "위도", "경도", "비고"], "활동점검": ["점검ID", "수요처ID", "점검일자", "점검자", "점검방법", "확인 활동인원", "점검내용", "조치사항"]};
+  var COLUMNS = {"수요처": ["수요처ID", "사업명", "유형", "수요처명", "주소", "위도", "경도", "참여자수", "수요자수", "활동시간", "담당자", "비고"], "9988개인": ["개인ID", "구분", "표시명", "소속수요처ID", "주소", "위도", "경도", "비고"], "활동점검": ["점검ID", "수요처ID", "점검일자", "점검자", "점검방법", "확인 활동인원", "점검내용", "조치사항"]};
   var REQUIRED = {"수요처": ["수요처ID", "사업명", "수요처명", "주소", "참여자수", "수요자수"], "9988개인": ["개인ID", "구분", "표시명", "소속수요처ID"], "활동점검": ["점검ID", "수요처ID", "점검일자", "점검자", "점검방법", "점검내용"]};
-  var INPUT_COLUMNS = {"수요처": ["사업명", "유형", "수요처명", "주소", "참여자수", "수요자수", "담당자", "비고"], "9988개인": ["구분", "표시명", "소속 마을", "주소", "비고"], "활동점검": ["수요처명", "사업명", "점검일자", "점검자", "점검방법", "확인 활동인원", "점검내용", "조치사항"]};
+  var INPUT_COLUMNS = {"수요처": ["사업명", "유형", "수요처명", "주소", "참여자수", "수요자수", "활동시간", "담당자", "비고"], "9988개인": ["구분", "표시명", "소속 마을", "주소", "비고"], "활동점검": ["수요처명", "사업명", "점검일자", "점검자", "점검방법", "확인 활동인원", "점검내용", "조치사항"]};
   // 업로드 때 꼭 있어야 하는 열(묶음 안에서 하나만 있으면 됨). 번호·좌표 열은 없어도 됨
   var UPLOAD_REQ = {
     "수요처": [["사업명"], ["수요처명"], ["주소"], ["참여자수"], ["수요자수"]],
@@ -1144,6 +1150,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
       mapTypeControl: true
     });
     infoWin = new naver.maps.InfoWindow({ content: "", borderWidth: 0, backgroundColor: "transparent", disableAnchor: true, pixelOffset: new naver.maps.Point(0, -18) });
+    hoverWin = new naver.maps.InfoWindow({ content: "", borderWidth: 0, backgroundColor: "transparent", disableAnchor: true, disableAutoPan: true, pixelOffset: new naver.maps.Point(0, -16) });
     naver.maps.Event.addListener(map, "click", function (e) {
       if (pick) { onMapClick({ latlng: { lat: e.coord.lat(), lng: e.coord.lng() } }); return; }
       closeInfo();
@@ -1152,7 +1159,21 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     var rt = null;
     window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(function () { resizeMap(); }, 150); });
   }
-  function closeInfo() { if (infoWin) infoWin.close(); openMarker = null; }
+  function closeInfo() { if (infoWin) infoWin.close(); openMarker = null; hideHover(); }
+  // 마우스를 올렸을 때 보이는 작은 정보 창(등록 내용)
+  var hoverWin = null, hoverMarker = null;
+  function hideHover() { if (hoverWin) hoverWin.close(); hoverMarker = null; }
+  function siteHoverHtml(s) {
+    var c = ML.siteCounts(s, state.persons), row = function (k, v) { return v === "" || v == null ? "" : '<dt>' + k + '</dt><dd>' + esc(v) + '</dd>'; };
+    return '<div class="hpop"><div class="pop-prog"><span class="dot" style="background:' + ML.programColor(s["사업명"]) + '"></span>' + esc(s["사업명"]) + ' · ' + (ML.siteType(s) === "수요자" ? "◆ 수요자" : "■ 수요처") + '</div>' +
+      '<b class="hpop-name">' + esc(s["수요처명"]) + '</b><dl>' +
+      row("주소", ML.str(s["주소"])) + row("참여자", c.participants + "명") + row("수요자", c.recipients + (ML.siteType(s) === "수요자" ? "명" : "명(곳)")) +
+      row("활동시간", ML.str(s["활동시간"]) || "미등록") + row("담당자", ML.str(s["담당자"])) + row("비고", ML.str(s["비고"])) + '</dl></div>';
+  }
+  function showHover(marker, html) {
+    if (!hoverWin || marker === openMarker) return;
+    var box = document.createElement("div"); box.innerHTML = html; hoverWin.setContent(box.firstChild); hoverWin.open(map, marker); hoverMarker = marker;
+  }
   function openInfo(marker, html) {
     var box = document.createElement("div"); box.className = "npop";
     box.innerHTML = html + '<button type="button" class="npop-close" aria-label="닫기">✕</button>';
@@ -1191,6 +1212,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
       '<h3 class="pop-name">' + esc(s["수요처명"]) + '</h3>' +
       '<dl><dt>유형</dt><dd>' + (ML.siteType(s) === "수요자" ? "◆ 수요자" : "■ 수요처") + '</dd><dt>주소</dt><dd>' + esc(s["주소"]) + '</dd>' +
       '<dt>참여자</dt><dd>' + pTxt + '</dd><dt>수요자</dt><dd>' + rTxt + '</dd>' +
+      (s["활동시간"] ? '<dt>활동시간</dt><dd>' + esc(s["활동시간"]) + '</dd>' : "") +
       '<dt>최근 활동점검</dt><dd>' + (last ? esc(last) : '<span class="muted">점검 기록 없음</span>') + '</dd>' +
       (s["담당자"] ? '<dt>담당자</dt><dd>' + esc(s["담당자"]) + '</dd>' : "") + '</dl>' +
       '<div class="pop-actions"><button type="button" class="primary" data-act="insp-add" data-id="' + esc(s["수요처ID"]) + '">점검 입력</button>' +
@@ -1213,7 +1235,9 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     state.sites.forEach(function (s) {
       if (!state.filters.programs[s["사업명"]] || !ML.hasCoords(s)) return;
       var m = new naver.maps.Marker({ map: map, position: ll(ML.toNumber(s["위도"]), ML.toNumber(s["경도"])), icon: makeIcon(ML.siteType(s) === "수요자" ? "diamond" : "square", ML.programColor(s["사업명"])), title: s["수요처명"], zIndex: 200 });
-      naver.maps.Event.addListener(m, "click", function () { if (!pick) openInfo(m, sitePopupHtml(siteById(s["수요처ID"]) || s)); });
+      naver.maps.Event.addListener(m, "click", function () { if (!pick) { hideHover(); openInfo(m, sitePopupHtml(siteById(s["수요처ID"]) || s)); } });
+      naver.maps.Event.addListener(m, "mouseover", function () { if (!pick) showHover(m, siteHoverHtml(siteById(s["수요처ID"]) || s)); });
+      naver.maps.Event.addListener(m, "mouseout", function () { if (hoverMarker === m) hideHover(); });
       markers.push(m); markerIndex.site[ML.str(s["수요처ID"])] = m; if (ML.siteType(s) === "수요자") shown.siteR++; else shown.sites++;
     });
     state.persons.forEach(function (p) {
@@ -1368,13 +1392,13 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     $("siteCount").textContent = "(" + rows.length + (prog ? "/" + state.sites.length : "") + "곳)";
     var wrap = $("siteTableWrap");
     if (!state.sites.length) { wrap.innerHTML = emptyStateHtml("수요처"); return; }
-    var h = '<table><thead><tr><th>사업명</th><th>유형</th><th>수요자(처)명</th><th>ID</th><th>주소</th><th>참여자</th><th>수요자</th><th>좌표</th><th>최근 점검</th><th>작업</th></tr></thead><tbody>';
+    var h = '<table><thead><tr><th>사업명</th><th>유형</th><th>수요자(처)명</th><th>ID</th><th>주소</th><th>참여자</th><th>수요자</th><th>활동시간</th><th>좌표</th><th>최근 점검</th><th>작업</th></tr></thead><tbody>';
     rows.forEach(function (s) {
       var c = ML.siteCounts(s, state.persons), last = ML.latestInspectionDate(s["수요처ID"], state.inspections);
       var pCell = c.auto && c.inputParticipants !== c.participants ? '<span class="mismatch" title="9988 집계 불일치">' + esc(c.inputParticipants) + '→' + c.participants + '</span>' : esc(c.participants);
       var rCell = c.auto && c.inputRecipients !== c.recipients ? '<span class="mismatch" title="9988 집계 불일치">' + esc(c.inputRecipients) + '→' + c.recipients + '</span>' : esc(c.recipients);
       h += '<tr><td><span class="sq" style="background:' + ML.programColor(s["사업명"]) + '"></span> ' + esc(s["사업명"]) + '</td><td>' + ML.siteType(s) + '</td><td><b>' + esc(s["수요처명"]) + '</b></td><td>' + esc(s["수요처ID"]) + '</td><td>' + esc(s["주소"]) + '</td>' +
-        '<td class="num">' + pCell + '</td><td class="num">' + rCell + '</td><td>' + (ML.hasCoords(s) ? '<span class="badge ok">있음</span>' : '<span class="badge warn">미지정</span>') + '</td>' +
+        '<td class="num">' + pCell + '</td><td class="num">' + rCell + '</td><td>' + (s["활동시간"] ? esc(s["활동시간"]) : '<span class="muted">-</span>') + '</td><td>' + (ML.hasCoords(s) ? '<span class="badge ok">있음</span>' : '<span class="badge warn">미지정</span>') + '</td>' +
         '<td>' + (last ? esc(last) : '<span class="muted">없음</span>') + '</td>' +
         '<td class="actions"><button type="button" class="small" data-focus="' + esc(s["수요처ID"]) + '">지도</button><button type="button" class="small needs-write" data-edit-site="' + esc(s["수요처ID"]) + '">수정</button><button type="button" class="small danger needs-write" data-del-site="' + esc(s["수요처ID"]) + '">삭제</button></td></tr>';
     });
@@ -1439,7 +1463,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     f["수요처명"].value = row["수요처명"] || ""; f["주소"].value = row["주소"] || "";
     f["위도"].value = ML.isBlank(row["위도"]) ? "" : row["위도"]; f["경도"].value = ML.isBlank(row["경도"]) ? "" : row["경도"];
     f["참여자수"].value = ML.isBlank(row["참여자수"]) ? "" : row["참여자수"]; f["수요자수"].value = ML.isBlank(row["수요자수"]) ? "" : row["수요자수"];
-    f["담당자"].value = row["담당자"] || ""; f["비고"].value = row["비고"] || "";
+    f["담당자"].value = row["담당자"] || ""; f["비고"].value = row["비고"] || ""; f["활동시간"].value = row["활동시간"] || "";
     $("hint9988").hidden = f["사업명"].value !== ML.PROGRAM_9988;
     $("siteErrors").hidden = true; $("siteErrors").innerHTML = "";
     $("btnSiteDelete").hidden = !editing;
@@ -1928,7 +1952,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
   renderAll();
   if (!LIB_OK.xlsx) toast("엑셀 라이브러리를 불러오지 못했습니다. 업로드·내려받기를 쓸 수 없습니다.");
   Store.init();
-  window.__sudoMapDebug = { Store: Store, state: state, libs: LIB_OK, FB: FB };
+  window.__sudoMapDebug = { Store: Store, state: state, libs: LIB_OK, FB: FB, markerFor: function (id) { return markerIndex.site[id]; } };
 })();
 </script>
 </body>
