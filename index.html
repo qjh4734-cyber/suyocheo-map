@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>수요처 활동 지도 v2.1</title>
+<title>수요처 활동 지도 v2.2</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
 /* 레이아웃: 상단 안내띠(sticky) → 헤더 → 탭 3개 → 패널. 지도 패널은 왼쪽 범례·검색 / 오른쪽 지도, 좁은 화면에서는 세로로 쌓임. */
@@ -193,11 +193,11 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
 
 <header class="app-header">
   <div>
-    <h1>노인공익활동 수요처 지도 <span class="ver">v2.1</span></h1>
+    <h1>노인공익활동 수요처 지도 <span class="ver">v2.2</span></h1>
     <p class="sub">2027년 노인공익활동 사업 10개 · 수요처(■) / 9988행복지키미 참여자(●)·수요자(▲) · 활동점검 기록</p>
   </div>
   <div class="status" id="storageStatus"><span class="pill">저장 위치 확인 중…</span></div>
-  <div class="userbox" id="userBox" hidden><span id="userEmail"></span><button type="button" id="btnLogout">이 기기에서 나가기</button></div>
+  <div class="userbox" id="userBox" hidden><span id="userEmail"></span><button type="button" id="btnLogout">작성자 이름 설정</button></div>
 </header>
 
 <section id="gate" class="gate" hidden aria-live="polite">
@@ -206,8 +206,7 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
     <p id="gateDesc" class="muted small-text"></p>
     <div id="gateMsg" class="msg" hidden></div>
     <form id="gateForm" novalidate>
-      <div class="field" id="gCodeRow"><label for="gCode">기관 코드</label><input type="password" id="gCode" autocomplete="off" spellcheck="false" placeholder="관리자에게 받은 코드"><label class="small-text muted" style="font-weight:400"><input type="checkbox" id="gShow"> 코드 보이기</label></div>
-      <div class="field" id="gWhoRow"><label for="gWho">이름 (기록용, 선택)</label><input type="text" id="gWho" autocomplete="name" placeholder="예: 홍길동 — 누가 입력·수정했는지 남깁니다"></div>
+      <pre id="gateRules" hidden style="white-space:pre-wrap;overflow-x:auto;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:.82rem;margin:0"></pre>
       <div class="gate-actions" id="gateActions"></div>
     </form>
   </div>
@@ -423,7 +422,7 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
 window.NAVER_KEY_ID = "uv443wo2ie";
 /* Firebase(공유 저장소) 설정: 콘솔의 firebaseConfig 중괄호 내용. 비워 두면(null) 이 브라우저에만 저장하는 방식으로 동작 */
 window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "authDomain": "suyocheo-map.firebaseapp.com", "projectId": "suyocheo-map", "storageBucket": "suyocheo-map.firebasestorage.app", "messagingSenderId": "880850823660", "appId": "1:880850823660:web:0a04034e63ea5d5028f8c9"};
-/* 기관 코드는 이 파일에 넣지 않습니다. Firestore 보안 규칙(서버)에만 있고, 직원은 처음 한 번 화면에서 입력합니다. */
+/* v2.2: 기관 코드 없음(공개 공유). 주소를 아는 누구나 데이터를 보고 고칠 수 있음 */
 /* ===================================================================== */
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1294,7 +1293,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     var st = $("storageStatus"), detail = $("storageDetail");
     if (Store.mode === "firebase") {
       st.innerHTML = '<span class="pill ok">공유 저장소</span>';
-      detail.textContent = "기관 코드를 입력한 직원끼리 같은 데이터를 실시간으로 공유합니다. 입력·수정·삭제는 바로 모든 직원 화면에 반영됩니다. 주기적으로 엑셀 백업을 받아 두세요.";
+      detail.textContent = "이 주소로 들어온 모든 사람이 같은 데이터를 실시간으로 공유합니다(보안 없음). 입력·수정·삭제는 바로 모든 화면에 반영됩니다. 주기적으로 엑셀 백업을 받아 두세요.";
       $("localNotice").hidden = true; $("readonlyNotice").hidden = true;
       document.body.classList.remove("readonly"); return;
     }
@@ -1755,14 +1754,15 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
   }
 
 
-  // ================= 공유 저장소(Firebase) — 기관 공용 코드 방식 =================
-  // 데이터 위치: spaces/{기관 코드}/sites · persons · inspections. 보안 규칙이 정확한 코드일 때만 읽기·쓰기를 허용.
+  // ================= 공유 저장소(Firebase) — 공개 공유(v2.2, 코드·로그인 없음) =================
+  // 데이터 위치: sites · persons · inspections (최상위 컬렉션). 보안 규칙이 이 3개 컬렉션의 읽기·쓰기를 허용해야 함.
   function lsGet(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
+  var RULES_TEXT = "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    // 누구나 수요처·9988개인·활동점검 데이터를 읽고 쓸 수 있음(보안 없음 · 시범 운영용)\n    match /{coll}/{id} {\n      allow read, write: if coll in [\"sites\", \"persons\", \"inspections\"];\n    }\n  }\n}";
   var FB = {
-    VER: "12.19.0", fs: null, code: "", who: "", entered: false, isAdmin: true, dataUnsubs: [],
-    KEY_CODE: "suyocheo-org-code", KEY_WHO: "suyocheo-writer",
+    VER: "12.19.0", fs: null, who: "", entered: false, isAdmin: true, dataUnsubs: [],
+    KEY_WHO: "suyocheo-writer",
     loadScript: function (src) {
       return new Promise(function (res, rej) { var s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = function () { rej(new Error(src)); }; document.head.appendChild(s); });
     },
@@ -1779,61 +1779,41 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     start: function () {
       var self = this;
       Store.mode = "firebase"; Store.canWrite = true; Store.writeKnown = true;
-      $("banner").textContent = BANNER.replace("공유 링크는 받은 사람 누구나 볼 수 있음", "기관 코드를 아는 직원만 데이터를 볼 수 있음");
+      $("banner").textContent = BANNER.replace("공유 링크는 받은 사람 누구나 볼 수 있음", "주소를 아는 누구나 보고 수정할 수 있음");
       document.body.classList.add("gated"); Gate.show("loading");
-      $("storageStatus").innerHTML = '<span class="pill">공유 저장소 · 기관 코드 필요</span>';
+      $("storageStatus").innerHTML = '<span class="pill">공유 저장소 연결 중…</span>';
       this.who = lsGet(this.KEY_WHO);
       return this.loadSdk().then(function () {
         firebase.initializeApp(window.FIREBASE_CONFIG);
         self.fs = firebase.firestore();
-        var saved = lsGet(self.KEY_CODE);
-        if (saved) self.tryCode(saved, true); else Gate.show("code");
+        self.enter();
       }).catch(function () {
         Gate.show("error", "공유 저장소(Firebase)를 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로 고침하세요.");
       });
     },
-    col: function (k) { return this.fs.collection("spaces").doc(this.code).collection(k); },
-    tryCode: function (code, silent) {
-      var self = this; code = ML.str(code);
-      if (!code) { Gate.msg("기관 코드를 입력하세요.", true); return; }
-      if (code.indexOf("/") >= 0) { Gate.msg("기관 코드가 맞지 않습니다.", true); return; }
-      Gate.busy(true); if (!silent) Gate.msg("확인 중…");
-      this.fs.collection("spaces").doc(code).collection("sites").limit(1).get().then(function () {
-        Gate.busy(false); self.code = code; lsSet(self.KEY_CODE, code); self.enter();
-      }, function (e) {
-        Gate.busy(false);
-        if (e && e.code === "permission-denied") { lsDel(self.KEY_CODE); Gate.show("code", silent ? "저장돼 있던 기관 코드가 바뀌었습니다. 새 코드를 입력하세요." : "기관 코드가 맞지 않습니다. 대·소문자와 하이픈(-)까지 정확히 입력하세요.", true); }
-        else Gate.show("code", "공유 저장소에 연결하지 못했습니다(" + (e && e.code) + "). 인터넷 연결이나 Firestore 설정을 확인하세요.", true);
-      });
-    },
+    col: function (k) { return this.fs.collection(k); },
     stopAll: function () {
       this.dataUnsubs.forEach(function (u) { try { u(); } catch (e) {} });
       this.dataUnsubs = []; this.entered = false;
       state.sites = []; state.persons = []; state.inspections = []; state.loaded = false; didFit = false;
     },
     enter: function () {
-      var self = this;
+      var self = this, got = {}, opened = false, failed = false;
       this.stopAll(); this.entered = true;
-      document.body.classList.remove("gated"); Gate.hide();
-      renderStorage(); renderUser(); renderAll();
-      setTimeout(function () { resizeMap(true); }, 60);
-      var got = {};
       ["sites", "persons", "inspections"].forEach(function (k) {
         self.dataUnsubs.push(self.col(k).onSnapshot(function (snap) {
+          if (!opened) { opened = true; document.body.classList.remove("gated"); Gate.hide(); renderStorage(); renderUser(); renderAll(); setTimeout(function () { resizeMap(true); }, 60); }
           state[k] = snap.docs.map(function (d) { return Object.assign({}, d.data()); });
           got[k] = true; if (got.sites && got.persons && got.inspections) state.loaded = true;
           renderAll(); if (pendingUpload) renderUploadResult();
         }, function (err) {
-          if (err && err.code === "permission-denied") { lsDel(self.KEY_CODE); self.leave("기관 코드가 바뀌었습니다. 관리자에게 새 코드를 받아 입력하세요."); }
-          else toast("공유 저장소 연결 오류(" + (err && err.code) + "). 새로 고침하세요.");
+          if (failed) return; failed = true;
+          self.stopAll(); document.body.classList.add("gated"); renderAll();
+          if (err && err.code === "permission-denied") Gate.show("rules");
+          else Gate.show("error", "공유 저장소에 연결하지 못했습니다(" + (err && err.code) + "). Firestore 데이터베이스가 만들어져 있는지, 인터넷 연결을 확인하세요.");
         }));
       });
     },
-    leave: function (msg) {
-      this.stopAll(); this.code = "";
-      document.body.classList.add("gated"); renderUser(); renderAll(); Gate.show("code", msg, !!msg);
-    },
-    exit: function () { lsDel(this.KEY_CODE); this.leave("이 기기에서 나갔습니다. 다시 들어오려면 기관 코드를 입력하세요."); },
     // 여러 건을 400건씩 묶어 저장(일괄 처리). 누가 언제 고쳤는지 함께 기록
     write: function (coll, ops) {
       var self = this; if (!ops.length) return Promise.resolve();
@@ -1849,7 +1829,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
           return b.commit();
         });
       }, Promise.resolve()).catch(function (e) {
-        toast(e && e.code === "permission-denied" ? "기관 코드가 맞지 않아 저장되지 않았습니다." : "저장 실패: " + (e && (e.code || e.message)));
+        toast(e && e.code === "permission-denied" ? "Firebase 보안 규칙이 저장을 막고 있습니다(규칙 확인 필요)." : "저장 실패: " + (e && (e.code || e.message)));
         throw e;
       });
     },
@@ -1859,44 +1839,52 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     }
   };
 
-  // ---------- 입장 화면(기관 코드) ----------
+  // ---------- 연결 상태 화면(연결 중 · 규칙 미설정 · 오류) ----------
   var Gate = {
     state: "",
-    show: function (s, msg, isErr) {
+    show: function (s, msg) {
       this.state = s; $("gate").hidden = false;
       var T = {
         loading: ["연결 중", "공유 저장소에 연결하는 중입니다…"],
-        code: ["기관 코드 입력", "관리자에게 받은 기관 코드를 입력하세요. 이 기기에서는 처음 한 번만 입력하면 됩니다."],
+        rules: ["Firebase 보안 규칙 설정 필요", "공유 저장소가 접근을 막고 있습니다. Firebase 콘솔 → Firestore Database → 규칙 탭에서 기존 내용을 모두 지우고 아래 내용을 붙여 넣은 뒤 [게시]를 누르세요. 1분 뒤 [다시 연결]을 누르면 열립니다."],
         error: ["연결 오류", ""]
       }[s] || ["", ""];
       $("gateTitle").textContent = T[0]; $("gateDesc").textContent = T[1];
-      var showForm = s === "code";
-      $("gCodeRow").hidden = !showForm; $("gWhoRow").hidden = !showForm;
-      if (showForm) { $("gCode").value = ""; $("gWho").value = FB.who || ""; }
-      var A = { code: [["들어가기", "enter", "primary", true]], error: [["새로 고침", "reload", "primary"]] }[s] || [];
+      var pre = $("gateRules"); pre.hidden = s !== "rules"; pre.textContent = s === "rules" ? RULES_TEXT : "";
+      var A = { rules: [["규칙 복사", "copy"], ["다시 연결", "retry", "primary"]], error: [["새로 고침", "reload", "primary"]] }[s] || [];
       var box = $("gateActions"); box.innerHTML = "";
       A.forEach(function (a) {
-        var b = document.createElement("button"); b.type = a[3] ? "submit" : "button"; b.textContent = a[0]; if (a[2]) b.className = a[2];
-        if (!a[3]) b.addEventListener("click", function () { if (a[1] === "reload") location.reload(); });
+        var b = document.createElement("button"); b.type = "button"; b.textContent = a[0]; if (a[2]) b.className = a[2];
+        b.addEventListener("click", function () {
+          if (a[1] === "reload") location.reload();
+          else if (a[1] === "retry") { Gate.show("loading"); FB.enter(); }
+          else if (a[1] === "copy") {
+            var done = function () { Gate.msg("복사했습니다. Firebase 규칙 칸에 붙여 넣으세요.", false); };
+            try { navigator.clipboard.writeText(RULES_TEXT).then(done, function () { Gate.msg("자동 복사가 안 됩니다. 위 상자의 내용을 직접 선택해 복사하세요.", true); }); }
+            catch (e) { Gate.msg("자동 복사가 안 됩니다. 위 상자의 내용을 직접 선택해 복사하세요.", true); }
+          }
+        });
         box.appendChild(b);
       });
-      if (s === "error") this.msg(msg || "알 수 없는 오류", true); else this.msg(msg || "", isErr);
-      if (showForm) setTimeout(function () { $("gCode").focus(); }, 30);
+      if (s === "error") this.msg(msg || "알 수 없는 오류", true); else this.msg(msg || "", false);
     },
     hide: function () { $("gate").hidden = true; this.state = ""; this.msg(""); },
     msg: function (text, isErr) { var m = $("gateMsg"); m.textContent = text || ""; m.hidden = !text; m.className = "msg" + (text ? (isErr ? " err" : " ok") : ""); },
-    busy: function (on) { $("gateActions").querySelectorAll("button").forEach(function (b) { b.disabled = !!on; }); }
+    busy: function () {}
   };
-  $("gateForm").addEventListener("submit", function (e) {
-    e.preventDefault();
-    if (Gate.state !== "code") return;
-    FB.who = $("gWho").value.trim(); if (FB.who) lsSet(FB.KEY_WHO, FB.who); else lsDel(FB.KEY_WHO);
-    FB.tryCode($("gCode").value, false);
-  });
-  $("gShow").addEventListener("change", function (e) { $("gCode").type = e.target.checked ? "text" : "password"; });
+  $("gateForm").addEventListener("submit", function (e) { e.preventDefault(); });
+  // 작성자 이름(기록용): 이 기기에 저장
   $("btnLogout").addEventListener("click", function () {
-    confirmDialog("이 기기에서 나가기", "이 기기에 저장된 기관 코드를 지웁니다. 다시 들어오려면 코드를 입력해야 합니다.", [{ label: "취소", value: null }, { label: "나가기", value: "ok", cls: "danger" }])
-      .then(function (v) { if (v === "ok") FB.exit(); });
+    var dlg = $("dlgConfirm"); $("dlgConfirmTitle").textContent = "작성자 이름 설정";
+    $("confirmMsg").textContent = "입력·수정 기록에 남길 이름입니다(이 기기에 저장).";
+    var box = $("confirmActions"); box.innerHTML = "";
+    var inp = document.createElement("input"); inp.type = "text"; inp.id = "whoInput"; inp.value = FB.who || ""; inp.placeholder = "예: 홍길동"; inp.style.flex = "1 1 200px";
+    var ok = document.createElement("button"); ok.type = "button"; ok.className = "primary"; ok.textContent = "저장";
+    var cancel = document.createElement("button"); cancel.type = "button"; cancel.textContent = "취소";
+    ok.addEventListener("click", function () { FB.who = inp.value.trim(); if (FB.who) lsSet(FB.KEY_WHO, FB.who); else lsDel(FB.KEY_WHO); renderUser(); dlg.close(); toast("작성자 이름: " + (FB.who || "이름 미입력")); });
+    cancel.addEventListener("click", function () { dlg.close(); });
+    box.appendChild(inp); box.appendChild(cancel); box.appendChild(ok);
+    dlg.onclose = null; dlg.showModal(); setTimeout(function () { inp.focus(); }, 30);
   });
   function renderUser() {
     var on = Store.mode === "firebase" && FB.entered;
