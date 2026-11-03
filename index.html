@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>수요처 활동 지도 v2.9</title>
+<title>수요처 활동 지도 v3.0</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
 /* 레이아웃: 상단 안내띠(sticky) → 헤더 → 탭 3개 → 패널. 지도 패널은 왼쪽 범례·검색 / 오른쪽 지도, 좁은 화면에서는 세로로 쌓임. */
@@ -130,6 +130,7 @@ body.gated .tabs, body.gated main, body.gated .notice { display: none !important
 .hpop dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
 .hpop dt { color: var(--muted); }
 .hpop dd { margin: 0; }
+.hpop .hpop-note { margin: 6px 0 0; font-size: .8rem; color: var(--muted); }
 .npop .npop-close { position: absolute; right: 6px; top: 6px; min-height: 28px; padding: 0 8px; border: none; background: none; color: var(--muted); }
 .tile-notice { position: absolute; left: 12px; bottom: 28px; z-index: 800; max-width: min(92%, 520px); background: var(--warn-bg); color: var(--warn); border: 1px solid var(--border); border-radius: 10px; padding: 8px 40px 8px 12px; font-size: .88rem; line-height: 1.4; }
 .tile-notice .tn-close { position: absolute; right: 6px; top: 6px; min-height: 28px; padding: 0 8px; font-size: .9rem; line-height: 1; border-color: transparent; background: transparent; color: var(--warn); }
@@ -214,7 +215,7 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
 
 <header class="app-header">
   <div>
-    <h1>노인공익활동 수요처 지도 <span class="ver">v2.9</span></h1>
+    <h1>노인공익활동 수요처 지도 <span class="ver">v3.0</span></h1>
     <p class="sub">2027년 노인공익활동 사업 10개 · 수요처(■)·수요자(◆) / 9988행복지키미 참여자(●)·수요자(▲) · 활동점검 기록</p>
   </div>
   <div class="status" id="storageStatus"><span class="pill">저장 위치 확인 중…</span></div>
@@ -404,7 +405,10 @@ details.insp-text summary { cursor: pointer; color: var(--accent); }
       <div class="field"><label for="f_person_lng">경도</label><input type="text" id="f_person_lng" name="경도" inputmode="decimal"></div>
     </div>
     <div class="btn-row"><button type="button" id="btnPersonPick">지도에서 위치 지정</button></div>
-    <div class="field"><label for="f_person_note">비고</label><input type="text" id="f_person_note" name="비고"></div>
+    <div class="field-row">
+      <div class="field"><label for="f_person_time">활동시간</label><input type="text" id="f_person_time" name="활동시간" placeholder="예: 월·수·금 10:00~12:00"></div>
+      <div class="field"><label for="f_person_note">비고</label><input type="text" id="f_person_note" name="비고"></div>
+    </div>
     <ul class="err-list" id="personErrors" hidden></ul>
     <div class="dialog-actions">
       <button type="button" class="danger left" id="btnPersonDelete" hidden>삭제</button>
@@ -471,9 +475,9 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
   "use strict";
 
   var PROGRAMS = [{"name": "9988행복지키미", "color": "#E15759"}, {"name": "녹색마을만들기", "color": "#59A14F"}, {"name": "우리문화지킴이", "color": "#B07AA1"}, {"name": "행복나눔봉사", "color": "#F28E2B"}, {"name": "지방하천정화", "color": "#4E79A7"}, {"name": "청소년보호지원", "color": "#EDC948"}, {"name": "커피박찌꺼기새활용", "color": "#9C755F"}, {"name": "신나는체험마을", "color": "#FF9DA7"}, {"name": "행복세탁봉사", "color": "#76B7B2"}, {"name": "농작물 및 전통문화 체험", "color": "#A0A800"}];
-  var COLUMNS = {"수요처": ["수요처ID", "사업명", "유형", "수요처명", "주소", "위도", "경도", "참여자수", "수요자수", "활동시간", "담당자", "비고"], "9988개인": ["개인ID", "구분", "표시명", "소속수요처ID", "주소", "위도", "경도", "비고"], "활동점검": ["점검ID", "수요처ID", "점검일자", "점검자", "점검방법", "확인 활동인원", "점검내용", "조치사항"]};
+  var COLUMNS = {"수요처": ["수요처ID", "사업명", "유형", "수요처명", "주소", "위도", "경도", "참여자수", "수요자수", "활동시간", "담당자", "비고"], "9988개인": ["개인ID", "구분", "표시명", "소속수요처ID", "주소", "위도", "경도", "활동시간", "비고"], "활동점검": ["점검ID", "수요처ID", "점검일자", "점검자", "점검방법", "확인 활동인원", "점검내용", "조치사항"]};
   var REQUIRED = {"수요처": ["수요처ID", "사업명", "수요처명", "주소", "참여자수", "수요자수"], "9988개인": ["개인ID", "구분", "표시명", "소속수요처ID"], "활동점검": ["점검ID", "수요처ID", "점검일자", "점검자", "점검방법", "점검내용"]};
-  var INPUT_COLUMNS = {"수요처": ["사업명", "유형", "수요처명", "주소", "참여자수", "수요자수", "활동시간", "담당자", "비고"], "9988개인": ["구분", "표시명", "소속 마을", "주소", "비고"], "활동점검": ["수요처명", "사업명", "점검일자", "점검자", "점검방법", "확인 활동인원", "점검내용", "조치사항"]};
+  var INPUT_COLUMNS = {"수요처": ["사업명", "유형", "수요처명", "주소", "참여자수", "수요자수", "활동시간", "담당자", "비고"], "9988개인": ["구분", "표시명", "소속 마을", "주소", "활동시간", "비고"], "활동점검": ["수요처명", "사업명", "점검일자", "점검자", "점검방법", "확인 활동인원", "점검내용", "조치사항"]};
   // 업로드 때 꼭 있어야 하는 열(묶음 안에서 하나만 있으면 됨). 번호·좌표 열은 없어도 됨
   var UPLOAD_REQ = {
     "수요처": [["사업명"], ["수요처명"], ["주소"], ["참여자수"], ["수요자수"]],
@@ -728,6 +732,15 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
         else seen[id] = x.rowNo;
       });
     }
+    // 올린 시트에 열 자체가 없으면(옛 양식 등) 같은 번호의 기존 값을 유지 — 빈칸으로 덮어쓰지 않음
+    function keepMissing(name, row, ex) {
+      if (!ex || !sheetsIn[name]) return;
+      var heads = sheetsIn[name].headers || [];
+      COLUMNS[name].forEach(function (c) {
+        if (c === ID_KEY[name] || c === "위도" || c === "경도" || heads.indexOf(c) >= 0) return;
+        if (isBlank(row[c]) && !isBlank(ex[c])) row[c] = ex[c];
+      });
+    }
     function keepCoords(row, ex) {
       if (!ex || hasCoords(row) || !hasCoords(ex)) return;
       if (canon(ex["주소"]) === canon(row["주소"])) { row["위도"] = toNumber(ex["위도"]); row["경도"] = toNumber(ex["경도"]); }
@@ -755,7 +768,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
         x.autoId = true; result.autoIds++; if (hit) result.autoMatched++; else result.autoNew++;
       }
       if (isBlank(row["수요처ID"]) && !x.errors.length) x.errors.push("수요처ID를 정하지 못함(사업명·수요처명 확인)");
-      if (!single && !x.errors.length) keepCoords(row, exSiteById[str(row["수요처ID"])]);
+      if (!single && !x.errors.length) { keepMissing("수요처", row, exSiteById[str(row["수요처ID"])]); keepCoords(row, exSiteById[str(row["수요처ID"])]); }
     });
     dupCheck(siteRows, "수요처ID", "사업명·수요처명");
 
@@ -799,7 +812,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
         x.autoId = true; result.autoIds++; if (hitP) result.autoMatched++; else result.autoNew++;
       }
       if (isBlank(row["개인ID"]) && !x.errors.length) x.errors.push("개인ID를 정하지 못함(구분·표시명·소속 마을 확인)");
-      if (!single && !x.errors.length) keepCoords(row, exPersonById[str(row["개인ID"])]);
+      if (!single && !x.errors.length) { keepMissing("9988개인", row, exPersonById[str(row["개인ID"])]); keepCoords(row, exPersonById[str(row["개인ID"])]); }
       delete row["소속 마을"];
     });
     dupCheck(personRows, "개인ID", "구분·표시명·소속 마을");
@@ -1218,11 +1231,33 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
   // 마우스를 올렸을 때 보이는 작은 정보 창(등록 내용)
   var hoverWin = null, hoverMarker = null;
   function hideHover() { if (hoverWin) hoverWin.close(); hoverMarker = null; }
+  function dlRow(k, v) { return v === "" || v == null ? "" : '<dt>' + k + '</dt><dd>' + esc(v) + '</dd>'; }
+  // 9988 마을 인원: 마을에 입력한 숫자 기준, 개인 위치 등록 건수와 다르면 함께 표시
+  function countText(input, located) {
+    if (ML.isBlank(input)) return located + "명 (위치 등록 기준)";
+    var n = ML.toNumber(input);
+    return n === located ? n + "명" : ML.str(input) + "명 (위치 등록 " + located + "명)";
+  }
+  // 9988 개인(●·▲) 정보: 주소·활동시간은 개인 값, 인원·담당자는 소속 마을 값(활동시간이 비면 마을 값)
+  function personInfoRows(p) {
+    var site = siteById(p["소속수요처ID"]), c = site ? ML.siteCounts(site, state.persons) : null;
+    var time = ML.str(p["활동시간"]) || (site && ML.str(site["활동시간"]) ? ML.str(site["활동시간"]) + " (마을 기준)" : "미등록");
+    return dlRow("소속 마을", site ? ML.str(site["수요처명"]) : ML.str(p["소속수요처ID"]) + " (없는 수요처)") + dlRow("구", ML.guOf(p)) +
+      dlRow("주소", ML.str(p["주소"]) || "미등록") +
+      (c ? dlRow("참여자 인원", countText(c.inputParticipants, c.participants)) + dlRow("수요자 인원", countText(c.inputRecipients, c.recipients)) : "") +
+      dlRow("활동시간", time) + dlRow("담당자", site ? ML.str(site["담당자"]) : "") + dlRow("비고", ML.str(p["비고"]));
+  }
+  function personKindText(p) { return p["구분"] === "참여자" ? "● 참여자" : "▲ 수요자"; }
+  function personHoverHtml(p) {
+    return '<div class="hpop"><div class="pop-prog"><span class="dot" style="background:' + ML.programColor(ML.PROGRAM_9988) + '"></span>' + esc(ML.PROGRAM_9988) + ' · ' + personKindText(p) + '</div>' +
+      '<b class="hpop-name">' + esc(p["표시명"]) + '</b><dl>' + personInfoRows(p) + '</dl>' +
+      (siteById(p["소속수요처ID"]) ? '<p class="hpop-note">인원·담당자는 소속 마을 기준</p>' : "") + '</div>';
+  }
   function siteHoverHtml(s) {
-    var c = ML.siteCounts(s, state.persons), row = function (k, v) { return v === "" || v == null ? "" : '<dt>' + k + '</dt><dd>' + esc(v) + '</dd>'; };
+    var c = ML.siteCounts(s, state.persons), row = dlRow;
     return '<div class="hpop"><div class="pop-prog"><span class="dot" style="background:' + ML.programColor(s["사업명"]) + '"></span>' + esc(s["사업명"]) + ' · ' + (ML.siteType(s) === "수요자" ? "◆ 수요자" : "■ 수요처") + '</div>' +
       '<b class="hpop-name">' + esc(s["수요처명"]) + '</b><dl>' +
-      row("구", ML.guOf(s)) + row("주소", ML.str(s["주소"])) + row("참여자", c.participants + "명") + row("수요자", c.recipients + (ML.siteType(s) === "수요자" ? "명" : "명(곳)")) +
+      row("구", ML.guOf(s)) + row("주소", ML.str(s["주소"])) + row("참여자", c.auto ? countText(c.inputParticipants, c.participants) : c.participants + "명") + row("수요자", c.auto ? countText(c.inputRecipients, c.recipients) : c.recipients + (ML.siteType(s) === "수요자" ? "명" : "명(곳)")) +
       row("활동시간", ML.str(s["활동시간"]) || "미등록") + row("담당자", ML.str(s["담당자"])) + row("비고", ML.str(s["비고"])) + '</dl></div>';
   }
   function showHover(marker, html) {
@@ -1276,9 +1311,9 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
   }
   function personPopupHtml(p) {
     var site = siteById(p["소속수요처ID"]);
-    return '<div class="pop"><div class="pop-prog"><span class="dot" style="background:' + ML.programColor(ML.PROGRAM_9988) + '"></span>' + esc(ML.PROGRAM_9988) + ' ' + (p["구분"] === "참여자" ? "● 참여자" : "▲ 수요자") + '</div>' +
+    return '<div class="pop"><div class="pop-prog"><span class="dot" style="background:' + ML.programColor(ML.PROGRAM_9988) + '"></span>' + esc(ML.PROGRAM_9988) + ' ' + personKindText(p) + '</div>' +
       '<h3 class="pop-name">' + esc(p["표시명"]) + '</h3>' +
-      '<dl><dt>소속 마을</dt><dd>' + esc(site ? site["수요처명"] : p["소속수요처ID"]) + '</dd>' + (p["주소"] ? '<dt>위치</dt><dd>' + esc(p["주소"]) + '</dd>' : "") + (p["비고"] ? '<dt>비고</dt><dd>' + esc(p["비고"]) + '</dd>' : "") + '</dl>' +
+      '<dl>' + personInfoRows(p) + '</dl>' + (site ? '<p class="small-text muted" style="margin:6px 0 0">인원·담당자는 소속 마을 기준</p>' : "") +
       '<div class="pop-actions"><button type="button" data-act="person-edit" data-id="' + esc(p["개인ID"]) + '">수정</button></div></div>';
   }
 
@@ -1299,7 +1334,9 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
       var isP = p["구분"] === "참여자";
       if ((isP && !state.filters.p9988) || (!isP && !state.filters.r9988) || !ML.hasCoords(p) || !guShown(p)) return;
       var m = new naver.maps.Marker({ map: map, position: ll(ML.toNumber(p["위도"]), ML.toNumber(p["경도"])), icon: makeIcon(isP ? "circle" : "triangle", ML.programColor(ML.PROGRAM_9988)), title: p["표시명"], zIndex: 100 });
-      naver.maps.Event.addListener(m, "click", function () { if (!pick) openInfo(m, personPopupHtml(personById(p["개인ID"]) || p)); });
+      naver.maps.Event.addListener(m, "click", function () { if (!pick) { hideHover(); openInfo(m, personPopupHtml(personById(p["개인ID"]) || p)); } });
+      naver.maps.Event.addListener(m, "mouseover", function () { if (!pick) showHover(m, personHoverHtml(personById(p["개인ID"]) || p)); });
+      naver.maps.Event.addListener(m, "mouseout", function () { if (hoverMarker === m) hideHover(); });
       markers.push(m); markerIndex.person[ML.str(p["개인ID"])] = m; if (isP) shown.p++; else shown.r++;
     });
     $("mapSummary").textContent = "표시 중: 수요처 " + shown.sites + "곳 · 수요자 " + shown.siteR + "명 · 9988 참여자 " + shown.p + "명 · 수요자 " + shown.r + "명" +
@@ -1549,10 +1586,10 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     $("personCount").textContent = "(" + rows.length + (sid ? "/" + state.persons.length : "") + "명)";
     var wrap = $("personTableWrap");
     if (!state.persons.length) { wrap.innerHTML = emptyStateHtml("9988행복지키미 개인 위치"); return; }
-    var h = '<table><thead><tr><th>구분</th><th>표시명</th><th>ID</th><th>소속 마을</th><th>주소(대략 위치)</th><th>좌표</th><th>비고</th><th>작업</th></tr></thead><tbody>';
+    var h = '<table><thead><tr><th>구분</th><th>표시명</th><th>ID</th><th>소속 마을</th><th>주소(대략 위치)</th><th>활동시간</th><th>좌표</th><th>비고</th><th>작업</th></tr></thead><tbody>';
     rows.forEach(function (p) {
       var site = siteById(p["소속수요처ID"]);
-      h += '<tr><td>' + (p["구분"] === "참여자" ? "● 참여자" : "▲ 수요자") + '</td><td><b>' + esc(p["표시명"]) + '</b></td><td>' + esc(p["개인ID"]) + '</td><td>' + esc(site ? site["수요처명"] : p["소속수요처ID"] + " (없는 수요처)") + '</td><td>' + esc(p["주소"]) + '</td>' +
+      h += '<tr><td>' + (p["구분"] === "참여자" ? "● 참여자" : "▲ 수요자") + '</td><td><b>' + esc(p["표시명"]) + '</b></td><td>' + esc(p["개인ID"]) + '</td><td>' + esc(site ? site["수요처명"] : p["소속수요처ID"] + " (없는 수요처)") + '</td><td>' + esc(p["주소"]) + '</td><td>' + (p["활동시간"] ? esc(p["활동시간"]) : '<span class="muted">-</span>') + '</td>' +
         '<td>' + (ML.hasCoords(p) ? '<span class="badge ok">있음</span>' : '<span class="badge warn">미지정</span>') + '</td><td>' + esc(p["비고"]) + '</td>' +
         '<td class="actions"><button type="button" class="small needs-write" data-edit-person="' + esc(p["개인ID"]) + '">수정</button><button type="button" class="small danger needs-write" data-del-person="' + esc(p["개인ID"]) + '">삭제</button></td></tr>';
     });
@@ -1705,7 +1742,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
     f["구분"].value = row["구분"] || "참여자"; f["표시명"].value = row["표시명"] || "";
     if (row["소속수요처ID"]) f["소속수요처ID"].value = ML.str(row["소속수요처ID"]);
     f["주소"].value = row["주소"] || ""; $("personGeoMsg").textContent = "주소를 입력하면 위치를 찾아 줍니다";
-    f["위도"].value = ML.isBlank(row["위도"]) ? "" : row["위도"]; f["경도"].value = ML.isBlank(row["경도"]) ? "" : row["경도"]; f["비고"].value = row["비고"] || "";
+    f["위도"].value = ML.isBlank(row["위도"]) ? "" : row["위도"]; f["경도"].value = ML.isBlank(row["경도"]) ? "" : row["경도"]; f["비고"].value = row["비고"] || ""; f["활동시간"].value = row["활동시간"] || "";
     showErrors("personErrors", []); $("btnPersonDelete").hidden = !editing; f.dataset.originalId = editing ? ML.str(id) : "";
     $("dlgPerson").showModal();
   }
@@ -2093,7 +2130,7 @@ window.FIREBASE_CONFIG = {"apiKey": "AIzaSyB8aRZ6eCcufIfE5jm65JfmSVJGtscHA4A", "
   renderAll();
   if (!LIB_OK.xlsx) toast("엑셀 라이브러리를 불러오지 못했습니다. 업로드·내려받기를 쓸 수 없습니다.");
   Store.init();
-  window.__sudoMapDebug = { Store: Store, state: state, libs: LIB_OK, FB: FB, markerFor: function (id) { return markerIndex.site[id]; } };
+  window.__sudoMapDebug = { Store: Store, state: state, libs: LIB_OK, FB: FB, markerFor: function (id) { return markerIndex.site[id]; }, personMarkerFor: function (id) { return markerIndex.person[id]; } };
 })();
 </script>
 </body>
